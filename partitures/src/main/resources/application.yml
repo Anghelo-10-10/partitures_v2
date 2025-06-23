@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: partitures
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/partitures_db
+    driver-class-name: org.postgresql.Driver
+    username: admin
+    password: admin
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+  liquibase:
+    enabled: false # Puedes habilitarlo si deseas migraciones controladas
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type: TRACE
