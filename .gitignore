@@ -1,0 +1,5 @@
+# Ignorar configuración de IntelliJ IDEA / Android Studio
+.idea/
+*.iml
+out/
+../.idea/vcs.xml
