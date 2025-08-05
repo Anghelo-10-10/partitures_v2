@@ -2,6 +2,12 @@ spring:
   application:
     name: partitures
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+      enabled: true
+
   datasource:
     url: jdbc:postgresql://localhost:5433/partitures_db
     driver-class-name: org.postgresql.Driver
@@ -20,6 +26,13 @@ spring:
 
   liquibase:
     enabled: false # Puedes habilitarlo si deseas migraciones controladas
+
+  app:
+    file:
+      upload-dir: uploads
+
+  server:
+    port: 8080
 
 logging:
   level:
