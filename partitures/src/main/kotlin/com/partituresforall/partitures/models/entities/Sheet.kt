@@ -9,7 +9,7 @@ data class Sheet(
     @Column(nullable = false, length = 150)
     var title: String,
 
-    @Column(length = 500)
+    @Column(length = 500, columnDefinition = "TEXT")
     var description: String? = null,
 
     // Información musical
@@ -24,7 +24,7 @@ data class Sheet(
 
     // PDF content
     @Lob
-    @Column(name = "pdf_content", nullable = false)
+    @Column(name = "pdf_content", nullable = false, columnDefinition = "BYTEA")
     var pdfContent: ByteArray,
 
     @Column(name = "pdf_filename", nullable = false, length = 255)

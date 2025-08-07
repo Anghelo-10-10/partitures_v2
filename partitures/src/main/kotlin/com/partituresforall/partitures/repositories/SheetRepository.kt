@@ -43,14 +43,18 @@ interface SheetRepository : JpaRepository<Sheet, Long> {
             "LOWER(s.description) LIKE LOWER(CONCAT('%', :search, '%')))")
     fun searchPublicSheets(@Param("search") searchTerm: String): List<Sheet>
 
-    @Query("SELECT s FROM Sheet s WHERE s.isPublic = true " +
-            "AND (:searchTerm IS NULL OR " +
-            "     LOWER(s.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-            "     LOWER(s.artist) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
-            "     LOWER(s.description) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) " +
-            "AND (:artist IS NULL OR LOWER(s.artist) LIKE LOWER(CONCAT('%', :artist, '%'))) " +
-            "AND (:genre IS NULL OR LOWER(s.genre) = LOWER(:genre)) " +
-            "AND (:instrument IS NULL OR LOWER(s.instrument) = LOWER(:instrument))")
+    @Query(value = """
+    SELECT * FROM sheets s 
+    WHERE s.is_public = true 
+    AND (:searchTerm IS NULL OR 
+         LOWER(s.title) ILIKE CONCAT('%', LOWER(:searchTerm), '%') OR 
+         LOWER(s.artist) ILIKE CONCAT('%', LOWER(:searchTerm), '%') OR 
+         (s.description IS NOT NULL AND LOWER(s.description) ILIKE CONCAT('%', LOWER(:searchTerm), '%')))
+    AND (:artist IS NULL OR LOWER(s.artist) ILIKE CONCAT('%', LOWER(:artist), '%'))
+    AND (:genre IS NULL OR LOWER(s.genre) = LOWER(:genre))
+    AND (:instrument IS NULL OR LOWER(s.instrument) = LOWER(:instrument))
+    ORDER BY s.created_at DESC
+    """, nativeQuery = true)
     fun findByAdvancedSearch(
         @Param("searchTerm") searchTerm: String?,
         @Param("artist") artist: String?,

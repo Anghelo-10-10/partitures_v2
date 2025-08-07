@@ -255,24 +255,67 @@ class SheetService(
 
 
     fun advancedSearch(request: AdvanceSearchRequest): List<SheetResponse> {
-        var sheets = sheetRepository.findByAdvancedSearch(
-            searchTerm = request.searchTerm?.takeIf { it.isNotBlank() },
-            artist = request.artist?.takeIf { it.isNotBlank() },
-            genre = request.genre?.takeIf { it.isNotBlank() },
-            instrument = request.instrument?.takeIf { it.isNotBlank() }
-        )
+        try {
+            println("=== BACKEND ADVANCED SEARCH DEBUG ===")
+            println("SearchTerm: '${request.searchTerm}'")
+            println("Artist: '${request.artist}'")
+            println("Genre: '${request.genre}'")
+            println("Instrument: '${request.instrument}'")
+            println("SortBy: '${request.sortBy}'")
 
-        sheets = when (request.sortBy) {
-            "title" -> sheets.sortedBy { it.title }
-            "artist" -> sheets.sortedBy { it.artist }
-            "recent" -> sheets.sortedByDescending { it.createdAt }
-            else -> sheets.sortedByDescending { it.createdAt }
-        }
+            // Step 1: Get sheets from database
+            println("Step 1: Querying database...")
+            var sheets = sheetRepository.findByAdvancedSearch(
+                searchTerm = request.searchTerm?.takeIf { it.isNotBlank() },
+                artist = request.artist?.takeIf { it.isNotBlank() },
+                genre = request.genre?.takeIf { it.isNotBlank() },
+                instrument = request.instrument?.takeIf { it.isNotBlank() }
+            )
+            println("Query returned ${sheets.size} sheets")
 
-        return sheets.map { sheet ->
-            val owner = userSheetRepository.findBySheetIdAndIsOwner(sheet.id, true)?.user
-                ?: throw SheetNotFoundException(sheet.id)
-            sheet.toResponse().copy(ownerId = owner.id)
+            // Step 2: Sort results
+            println("Step 2: Sorting results by '${request.sortBy}'...")
+            sheets = when (request.sortBy) {
+                "title" -> sheets.sortedBy { it.title }
+                "artist" -> sheets.sortedBy { it.artist }
+                "recent" -> sheets.sortedByDescending { it.createdAt }
+                else -> sheets.sortedByDescending { it.createdAt }
+            }
+            println("Sorting completed")
+
+            // Step 3: Map to response with owner lookup (AQUÍ ESTÁ EL PROBLEMA)
+            println("Step 3: Mapping to response with owner lookup...")
+            val results = mutableListOf<SheetResponse>()
+
+            sheets.forEachIndexed { index, sheet ->
+                try {
+                    println("Processing sheet [$index]: ID=${sheet.id}, Title='${sheet.title}'")
+
+                    val owner = userSheetRepository.findBySheetIdAndIsOwner(sheet.id, true)?.user
+
+                    if (owner == null) {
+                        println("❌ ERROR: No owner found for sheet ID=${sheet.id}, Title='${sheet.title}'")
+                        println("Skipping this sheet...")
+                    } else {
+                        println("✅ Owner found for sheet ID=${sheet.id}: UserID=${owner.id}")
+                        val sheetResponse = sheet.toResponse().copy(ownerId = owner.id)
+                        results.add(sheetResponse)
+                    }
+                } catch (e: Exception) {
+                    println("❌ EXCEPTION processing sheet ID=${sheet.id}: ${e.message}")
+                    e.printStackTrace()
+                }
+            }
+
+            println("Mapping completed. Returning ${results.size} results")
+            return results
+
+        } catch (e: Exception) {
+            println("=== FATAL ERROR IN ADVANCED SEARCH ===")
+            println("Error type: ${e.javaClass.simpleName}")
+            println("Error message: ${e.message}")
+            e.printStackTrace()
+            throw e
         }
     }
 
