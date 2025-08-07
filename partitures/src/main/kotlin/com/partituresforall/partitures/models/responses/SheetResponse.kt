@@ -11,7 +11,7 @@ data class SheetResponse(
     val instrument: String,
     val pdfFilename: String,
     val pdfSize: Long,
-    val pdfSizeMB: String, // "1.5 MB" - más amigable
+    val pdfSizeMB: String,
     val pdfContentType: String,
     val pdfDownloadUrl: String,
     val isPublic: Boolean,

@@ -5,7 +5,9 @@ import com.partituresforall.partitures.exceptions.exceptions.users.InvalidPasswo
 import com.partituresforall.partitures.exceptions.exceptions.users.UserNotFoundException
 import com.partituresforall.partitures.models.entities.User
 import com.partituresforall.partitures.models.requests.CreateUserRequest
+import com.partituresforall.partitures.models.requests.UpdateProfileRequest
 import com.partituresforall.partitures.models.requests.UpdateUserRequest
+import com.partituresforall.partitures.models.responses.UserProfileResponse
 import com.partituresforall.partitures.models.responses.UserResponse
 import com.partituresforall.partitures.repositories.UserRepository
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -19,12 +21,10 @@ class UserService(
     private val passwordEncoder: PasswordEncoder
 ) {
     fun createUser(request: CreateUserRequest): UserResponse {
-        // Validar email único (usando findByEmail en lugar de existsByEmail)
         userRepository.findByEmail(request.email)?.let {
             throw DuplicateEmailException(request.email)
         }
 
-        // Validar contraseña (con mensaje por defecto)
         if (request.password.length < 8) {
             throw InvalidPasswordException()
         }
@@ -81,9 +81,39 @@ class UserService(
         id = this.id,
         name = this.name,
         email = this.email,
+        bio = this.bio,                    // NUEVO
+        profileImageUrl = this.profileImageUrl,  // NUEVO
         createdAt = this.createdAt,
         updatedAt = this.updatedAt
     )
+
+    fun getUserProfile(id: Long): UserProfileResponse {
+        val user = userRepository.findById(id).orElseThrow {
+            UserNotFoundException(id)
+        }
+        return user.toProfileResponse()
+    }
+
+    fun updateProfile(userId: Long, request: UpdateProfileRequest): UserResponse {
+        val user = userRepository.findById(userId).orElseThrow {
+            UserNotFoundException(userId)
+        }
+
+        request.name?.let { user.name = it }
+        request.bio?.let { user.bio = it }
+        request.profileImageUrl?.let { user.profileImageUrl = it }
+
+        return userRepository.save(user).toResponse()
+    }
+
+    private fun User.toProfileResponse() = UserProfileResponse(
+        id = this.id,
+        name = this.name,
+        bio = this.bio,
+        profileImageUrl = this.profileImageUrl,
+        createdAt = this.createdAt
+    )
+
 }
 
 

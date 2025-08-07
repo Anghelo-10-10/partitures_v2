@@ -1,6 +1,6 @@
 package com.partituresforall.partitures.controllers
 
-import com.partituresforall.partitures.models.requests.CreateSheetRequest
+import com.partituresforall.partitures.models.requests.AdvanceSearchRequest
 import com.partituresforall.partitures.models.requests.CreateSheetWithFileRequest
 import com.partituresforall.partitures.models.requests.UpdateSheetRequest
 import com.partituresforall.partitures.models.responses.SheetResponse
@@ -16,8 +16,6 @@ import org.springframework.web.multipart.MultipartFile
 class SheetController(
     private val sheetService: SheetService
 ) {
-
-    // ===== CRUD BÁSICO =====
 
     @PostMapping(consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun createSheetWithFile(
@@ -68,7 +66,6 @@ class SheetController(
         sheetService.deleteSheet(id)
     }
 
-    // ===== ARCHIVOS PDF =====
 
     @GetMapping("/{id}/pdf")
     fun viewSheetPdf(@PathVariable id: Long): ResponseEntity<ByteArray> {
@@ -93,8 +90,6 @@ class SheetController(
             .contentLength(sheet.pdfSize)
             .body(pdfContent)
     }
-
-    // ===== BÚSQUEDAS Y FILTROS =====
 
     @GetMapping("/public")
     fun getPublicSheets(): List<SheetResponse> {
@@ -121,8 +116,6 @@ class SheetController(
         return sheetService.getSheetsByArtist(artist)
     }
 
-    // ===== FILTROS DISPONIBLES =====
-
     @GetMapping("/filters/genres")
     fun getAvailableGenres(): List<String> {
         return sheetService.getAvailableGenres()
@@ -138,14 +131,11 @@ class SheetController(
         return sheetService.getAvailableArtists()
     }
 
-    // ===== USUARIO =====
-
     @GetMapping("/users/{userId}/owned")
     fun getUserOwnedSheets(@PathVariable userId: Long): List<SheetResponse> {
         return sheetService.getUserOwnedSheets(userId)
     }
 
-    // ===== FAVORITOS =====
 
     @PostMapping("/{sheetId}/favorites")
     fun addToFavorites(
@@ -174,5 +164,34 @@ class SheetController(
         @RequestParam userId: Long
     ): Boolean {
         return sheetService.isSheetFavorite(userId, sheetId)
+    }
+
+
+    @GetMapping("/search/advanced")
+    fun advancedSearch(
+        @RequestParam(required = false) searchTerm: String?,
+        @RequestParam(required = false) artist: String?,
+        @RequestParam(required = false) genre: String?,
+        @RequestParam(required = false) instrument: String?,
+        @RequestParam(defaultValue = "recent") sortBy: String
+    ): List<SheetResponse> {
+        val request = AdvanceSearchRequest(
+            searchTerm = searchTerm,
+            artist = artist,
+            genre = genre,
+            instrument = instrument,
+            sortBy = sortBy
+        )
+        return sheetService.advancedSearch(request)
+    }
+
+    @GetMapping("/recent")
+    fun getRecentSheets(): List<SheetResponse> {
+        return sheetService.getRecentSheets()
+    }
+
+    @GetMapping("/trending")
+    fun getTrendingSheets(): List<SheetResponse> {
+        return sheetService.getRecentSheets() // Por ahora trending = recientes
     }
 }

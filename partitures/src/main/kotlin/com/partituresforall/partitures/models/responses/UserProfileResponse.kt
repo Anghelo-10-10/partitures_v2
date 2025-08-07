@@ -2,12 +2,10 @@ package com.partituresforall.partitures.models.responses
 
 import java.time.LocalDateTime
 
-data class UserResponse(
+data class UserProfileResponse(
     val id: Long,
     val name: String,
-    val email: String,
     val bio: String?,
     val profileImageUrl: String?,
-    val createdAt: LocalDateTime,
-    val updatedAt: LocalDateTime
+    val createdAt: LocalDateTime
 )

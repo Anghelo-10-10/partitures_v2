@@ -1,7 +1,9 @@
 package com.partituresforall.partitures.controllers
 
 import com.partituresforall.partitures.models.requests.CreateUserRequest
+import com.partituresforall.partitures.models.requests.UpdateProfileRequest
 import com.partituresforall.partitures.models.requests.UpdateUserRequest
+import com.partituresforall.partitures.models.responses.UserProfileResponse
 import com.partituresforall.partitures.models.responses.UserResponse
 import com.partituresforall.partitures.services.UserService
 import org.springframework.web.bind.annotation.*
@@ -32,5 +34,18 @@ class UserController(
     @DeleteMapping("/{id}")
     fun deleteUser(@PathVariable id: Long) {
         userService.deleteUser(id)
+    }
+
+    @GetMapping("/{id}/profile")
+    fun getUserProfile(@PathVariable id: Long): UserProfileResponse {
+        return userService.getUserProfile(id)
+    }
+
+    @PutMapping("/profile")
+    fun updateMyProfile(
+        @RequestParam userId: Long, // Temporalmente como param, después con JWT
+        @RequestBody request: UpdateProfileRequest
+    ): UserResponse {
+        return userService.updateProfile(userId, request)
     }
 }

@@ -26,11 +26,11 @@ class FileService {
         "application/pdf"
     )
 
-    private val maxFileSize = 10 * 1024 * 1024L // 10MB
+    private val maxFileSize = 10 * 1024 * 1024L
 
     @PostConstruct
     fun init() {
-        // Crear directorio si no existe después de que Spring inyecte las propiedades
+
         try {
             val uploadPath = Paths.get(uploadDir)
             if (!Files.exists(uploadPath)) {
@@ -80,23 +80,23 @@ class FileService {
     }
 
     private fun validateFile(file: MultipartFile) {
-        // Validar que no esté vacío
+
         if (file.isEmpty) {
             throw InvalidFileTypeException("File is empty")
         }
 
-        // Validar tamaño
+
         if (file.size > maxFileSize) {
             throw InvalidFileTypeException("File size exceeds maximum allowed size of ${maxFileSize / (1024 * 1024)}MB")
         }
 
-        // Validar tipo de contenido
+
         val contentType = file.contentType
         if (contentType !in allowedContentTypes) {
             throw InvalidFileTypeException("File type not allowed. Only PDF files are accepted")
         }
 
-        // Validar extensión del archivo
+
         val originalFilename = file.originalFilename ?: ""
         if (!originalFilename.lowercase().endsWith(".pdf")) {
             throw InvalidFileTypeException("File must have .pdf extension")

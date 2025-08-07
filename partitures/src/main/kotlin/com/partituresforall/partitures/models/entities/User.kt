@@ -12,7 +12,12 @@ data class User(
     var email: String,
 
     @Column(nullable = false, length = 255)
-    var password: String
+    var password: String,
 
+    @Column(length = 500)
+    var bio: String? = null,
+
+    @Column(name = "profile_image_url", length = 255)
+    var profileImageUrl: String? = null
 
 ) : BaseEntity()

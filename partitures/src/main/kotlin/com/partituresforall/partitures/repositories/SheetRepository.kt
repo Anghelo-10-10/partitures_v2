@@ -8,25 +8,25 @@ import org.springframework.stereotype.Repository
 
 @Repository
 interface SheetRepository : JpaRepository<Sheet, Long> {
-    // Búsquedas básicas
+
     fun findByIsPublic(isPublic: Boolean): List<Sheet>
 
-    // Búsquedas por campos musicales
+
     fun findByArtistContainingIgnoreCase(artist: String): List<Sheet>
     fun findByGenreIgnoreCase(genre: String): List<Sheet>
     fun findByInstrumentIgnoreCase(instrument: String): List<Sheet>
     fun findByTitleContainingIgnoreCase(title: String): List<Sheet>
 
-    // Búsquedas combinadas
+
     fun findByGenreIgnoreCaseAndInstrumentIgnoreCase(genre: String, instrument: String): List<Sheet>
     fun findByArtistContainingIgnoreCaseAndGenreIgnoreCase(artist: String, genre: String): List<Sheet>
 
-    // Búsquedas públicas con filtros
+
     fun findByIsPublicAndGenreIgnoreCase(isPublic: Boolean, genre: String): List<Sheet>
     fun findByIsPublicAndInstrumentIgnoreCase(isPublic: Boolean, instrument: String): List<Sheet>
     fun findByIsPublicAndArtistContainingIgnoreCase(isPublic: Boolean, artist: String): List<Sheet>
 
-    // Obtener géneros, artistas e instrumentos únicos (para filtros en la app)
+
     @Query("SELECT DISTINCT s.genre FROM Sheet s WHERE s.isPublic = true ORDER BY s.genre")
     fun findDistinctGenres(): List<String>
 
@@ -36,10 +36,34 @@ interface SheetRepository : JpaRepository<Sheet, Long> {
     @Query("SELECT DISTINCT s.artist FROM Sheet s WHERE s.isPublic = true ORDER BY s.artist")
     fun findDistinctArtists(): List<String>
 
-    // Búsqueda general (título, artista o descripción)
+
     @Query("SELECT s FROM Sheet s WHERE s.isPublic = true AND " +
             "(LOWER(s.title) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
             "LOWER(s.artist) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
             "LOWER(s.description) LIKE LOWER(CONCAT('%', :search, '%')))")
     fun searchPublicSheets(@Param("search") searchTerm: String): List<Sheet>
+
+    @Query("SELECT s FROM Sheet s WHERE s.isPublic = true " +
+            "AND (:searchTerm IS NULL OR " +
+            "     LOWER(s.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "     LOWER(s.artist) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR " +
+            "     LOWER(s.description) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) " +
+            "AND (:artist IS NULL OR LOWER(s.artist) LIKE LOWER(CONCAT('%', :artist, '%'))) " +
+            "AND (:genre IS NULL OR LOWER(s.genre) = LOWER(:genre)) " +
+            "AND (:instrument IS NULL OR LOWER(s.instrument) = LOWER(:instrument))")
+    fun findByAdvancedSearch(
+        @Param("searchTerm") searchTerm: String?,
+        @Param("artist") artist: String?,
+        @Param("genre") genre: String?,
+        @Param("instrument") instrument: String?
+    ): List<Sheet>
+
+
+    fun findByIsPublicOrderByCreatedAtDesc(isPublic: Boolean): List<Sheet>
+
+
+    fun findByIsPublicOrderByTitleAsc(isPublic: Boolean): List<Sheet>
+
+
+    fun findByIsPublicOrderByArtistAsc(isPublic: Boolean): List<Sheet>
 }

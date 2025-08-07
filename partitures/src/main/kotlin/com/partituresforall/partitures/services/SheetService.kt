@@ -11,6 +11,7 @@ import com.partituresforall.partitures.models.responses.SheetResponse
 import com.partituresforall.partitures.repositories.SheetRepository
 import com.partituresforall.partitures.repositories.UserRepository
 import com.partituresforall.partitures.repositories.UserSheetRepository
+import com.partituresforall.partitures.models.requests.AdvanceSearchRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.multipart.MultipartFile
@@ -25,12 +26,10 @@ class SheetService(
 ) {
 
     fun createSheetWithFile(request: CreateSheetWithFileRequest, file: MultipartFile): SheetResponse {
-        // Validar owner
         val owner = userRepository.findById(request.ownerId).orElseThrow {
             UserNotFoundException(request.ownerId)
         }
 
-        // Validar archivo
         validateFile(file)
 
         val sheet = sheetRepository.save(
@@ -86,7 +85,6 @@ class SheetService(
         val owner = userSheetRepository.findBySheetIdAndIsOwner(id, true)?.user
             ?: throw SheetNotFoundException(id)
 
-        // Actualizar campos
         request.title?.let { sheet.title = it }
         request.description?.let { sheet.description = it }
         request.artist?.let { sheet.artist = it }
@@ -106,10 +104,8 @@ class SheetService(
         val owner = userSheetRepository.findBySheetIdAndIsOwner(id, true)?.user
             ?: throw SheetNotFoundException(id)
 
-        // Validar nuevo archivo
         validateFile(file)
 
-        // Actualizar contenido del PDF
         sheet.pdfContent = file.bytes
         sheet.pdfFilename = file.originalFilename ?: "partitura.pdf"
         sheet.pdfSize = file.size
@@ -127,7 +123,6 @@ class SheetService(
         sheetRepository.deleteById(id)
     }
 
-    // ===== MÉTODOS DE BÚSQUEDA =====
 
     fun getPublicSheets(): List<SheetResponse> {
         return sheetRepository.findByIsPublic(true)
@@ -174,7 +169,6 @@ class SheetService(
             }
     }
 
-    // Obtener filtros disponibles
     fun getAvailableGenres(): List<String> {
         return sheetRepository.findDistinctGenres()
     }
@@ -197,8 +191,6 @@ class SheetService(
                 it.sheet.toResponse().copy(ownerId = userId)
             }
     }
-
-    // ===== MÉTODOS DE FAVORITOS =====
 
     fun addToFavorites(userId: Long, sheetId: Long) {
         val user = userRepository.findById(userId).orElseThrow {
@@ -261,7 +253,38 @@ class SheetService(
         return userSheetRepository.existsByUserIdAndSheetIdAndIsFavorite(userId, sheetId, true)
     }
 
-    // ===== VALIDACIONES Y UTILIDADES =====
+
+    fun advancedSearch(request: AdvanceSearchRequest): List<SheetResponse> {
+        var sheets = sheetRepository.findByAdvancedSearch(
+            searchTerm = request.searchTerm?.takeIf { it.isNotBlank() },
+            artist = request.artist?.takeIf { it.isNotBlank() },
+            genre = request.genre?.takeIf { it.isNotBlank() },
+            instrument = request.instrument?.takeIf { it.isNotBlank() }
+        )
+
+        sheets = when (request.sortBy) {
+            "title" -> sheets.sortedBy { it.title }
+            "artist" -> sheets.sortedBy { it.artist }
+            "recent" -> sheets.sortedByDescending { it.createdAt }
+            else -> sheets.sortedByDescending { it.createdAt }
+        }
+
+        return sheets.map { sheet ->
+            val owner = userSheetRepository.findBySheetIdAndIsOwner(sheet.id, true)?.user
+                ?: throw SheetNotFoundException(sheet.id)
+            sheet.toResponse().copy(ownerId = owner.id)
+        }
+    }
+
+    fun getRecentSheets(): List<SheetResponse> {
+        return sheetRepository.findByIsPublicOrderByCreatedAtDesc(true)
+            .take(20) // Limitar a las 20 más recientes
+            .map { sheet ->
+                val owner = userSheetRepository.findBySheetIdAndIsOwner(sheet.id, true)?.user
+                    ?: throw SheetNotFoundException(sheet.id)
+                sheet.toResponse().copy(ownerId = owner.id)
+            }
+    }
 
     private fun validateFile(file: MultipartFile) {
         if (file.isEmpty) {
