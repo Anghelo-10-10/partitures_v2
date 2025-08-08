@@ -15,12 +15,14 @@ import com.partituresforall.partitures.repositories.UserRepository
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.multipart.MultipartFile
 
 @Service
 @Transactional
 class UserService(
     private val userRepository: UserRepository,
-    private val passwordEncoder: PasswordEncoder
+    private val passwordEncoder: PasswordEncoder,
+    private val fileService: FileService // Inyectar FileService
 ) {
 
     // ===== NUEVO MÉTODO DE LOGIN =====
@@ -33,6 +35,54 @@ class UserService(
         }
 
         return user.toResponse()
+    }
+
+    // ===== NUEVOS MÉTODOS PARA FOTO DE PERFIL =====
+
+    fun uploadProfileImage(userId: Long, image: MultipartFile): UserResponse {
+        val user = userRepository.findById(userId).orElseThrow {
+            UserNotFoundException(userId)
+        }
+
+        // Eliminar imagen anterior si existe
+        user.profileImageUrl?.let { oldImageUrl ->
+            // Extraer el nombre del archivo de la URL
+            val fileName = oldImageUrl.substringAfterLast("/")
+            if (fileName.contains("images/") || fileName.contains("_")) {
+                // Si es un archivo generado por nuestro sistema, intentar eliminarlo
+                fileService.deleteFile("images/$fileName")
+            }
+        }
+
+        // Subir nueva imagen
+        val imageFileName = fileService.storeImageFile(image)
+        val imageUrl = fileService.getFileUrl(imageFileName)
+
+        // Actualizar usuario
+        user.profileImageUrl = imageUrl
+        val updatedUser = userRepository.save(user)
+
+        return updatedUser.toResponse()
+    }
+
+    fun deleteProfileImage(userId: Long): UserResponse {
+        val user = userRepository.findById(userId).orElseThrow {
+            UserNotFoundException(userId)
+        }
+
+        // Eliminar archivo físico si existe
+        user.profileImageUrl?.let { imageUrl ->
+            val fileName = imageUrl.substringAfterLast("/")
+            if (fileName.contains("images/") || fileName.contains("_")) {
+                fileService.deleteFile("images/$fileName")
+            }
+        }
+
+        // Limpiar URL en base de datos
+        user.profileImageUrl = null
+        val updatedUser = userRepository.save(user)
+
+        return updatedUser.toResponse()
     }
 
     // ===== MÉTODOS EXISTENTES (SIN CAMBIOS) =====
@@ -88,6 +138,17 @@ class UserService(
     }
 
     fun deleteUser(id: Long) {
+        val user = userRepository.findById(id).orElse(null)
+
+        // Eliminar imagen de perfil si existe
+        user?.profileImageUrl?.let { imageUrl ->
+            val fileName = imageUrl.substringAfterLast("/")
+            if (fileName.contains("images/") || fileName.contains("_")) {
+                fileService.deleteFile("images/$fileName")
+            }
+        }
+
+        // Eliminar usuario
         if (!userRepository.existsById(id)) {
             throw UserNotFoundException(id)
         }

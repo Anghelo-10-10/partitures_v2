@@ -6,7 +6,9 @@ import com.partituresforall.partitures.models.requests.UpdateUserRequest
 import com.partituresforall.partitures.models.responses.UserProfileResponse
 import com.partituresforall.partitures.models.responses.UserResponse
 import com.partituresforall.partitures.services.UserService
+import org.springframework.http.MediaType
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
 
 @RestController
 @RequestMapping("/api/users")
@@ -47,5 +49,22 @@ class UserController(
         @RequestBody request: UpdateProfileRequest
     ): UserResponse {
         return userService.updateProfile(userId, request)
+    }
+
+    // ===== NUEVO ENDPOINT PARA SUBIR FOTO DE PERFIL =====
+    @PostMapping("/profile/image", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun uploadProfileImage(
+        @RequestParam("userId") userId: Long,
+        @RequestParam("image") image: MultipartFile
+    ): UserResponse {
+        return userService.uploadProfileImage(userId, image)
+    }
+
+    // ===== ENDPOINT PARA ELIMINAR FOTO DE PERFIL =====
+    @DeleteMapping("/profile/image")
+    fun deleteProfileImage(
+        @RequestParam userId: Long
+    ): UserResponse {
+        return userService.deleteProfileImage(userId)
     }
 }
