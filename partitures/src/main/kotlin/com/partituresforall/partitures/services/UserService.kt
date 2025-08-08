@@ -3,8 +3,10 @@ package com.partituresforall.partitures.services
 import com.partituresforall.partitures.exceptions.exceptions.users.DuplicateEmailException
 import com.partituresforall.partitures.exceptions.exceptions.users.InvalidPasswordException
 import com.partituresforall.partitures.exceptions.exceptions.users.UserNotFoundException
+import com.partituresforall.partitures.exceptions.exceptions.users.InvalidCredentialsException
 import com.partituresforall.partitures.models.entities.User
 import com.partituresforall.partitures.models.requests.CreateUserRequest
+import com.partituresforall.partitures.models.requests.LoginRequest
 import com.partituresforall.partitures.models.requests.UpdateProfileRequest
 import com.partituresforall.partitures.models.requests.UpdateUserRequest
 import com.partituresforall.partitures.models.responses.UserProfileResponse
@@ -20,6 +22,21 @@ class UserService(
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder
 ) {
+
+    // ===== NUEVO MÉTODO DE LOGIN =====
+    fun loginUser(request: LoginRequest): UserResponse {
+        val user = userRepository.findByEmail(request.email)
+            ?: throw InvalidCredentialsException()
+
+        if (!passwordEncoder.matches(request.password, user.password)) {
+            throw InvalidCredentialsException()
+        }
+
+        return user.toResponse()
+    }
+
+    // ===== MÉTODOS EXISTENTES (SIN CAMBIOS) =====
+
     fun createUser(request: CreateUserRequest): UserResponse {
         userRepository.findByEmail(request.email)?.let {
             throw DuplicateEmailException(request.email)
@@ -81,8 +98,8 @@ class UserService(
         id = this.id,
         name = this.name,
         email = this.email,
-        bio = this.bio,                    // NUEVO
-        profileImageUrl = this.profileImageUrl,  // NUEVO
+        bio = this.bio,
+        profileImageUrl = this.profileImageUrl,
         createdAt = this.createdAt,
         updatedAt = this.updatedAt
     )
@@ -113,7 +130,4 @@ class UserService(
         profileImageUrl = this.profileImageUrl,
         createdAt = this.createdAt
     )
-
 }
-
-
