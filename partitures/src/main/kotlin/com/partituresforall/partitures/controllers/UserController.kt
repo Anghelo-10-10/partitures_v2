@@ -51,20 +51,4 @@ class UserController(
         return userService.updateProfile(userId, request)
     }
 
-    // ===== NUEVO ENDPOINT PARA SUBIR FOTO DE PERFIL =====
-    @PostMapping("/profile/image", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
-    fun uploadProfileImage(
-        @RequestParam("userId") userId: Long,
-        @RequestParam("image") image: MultipartFile
-    ): UserResponse {
-        return userService.uploadProfileImage(userId, image)
-    }
-
-    // ===== ENDPOINT PARA ELIMINAR FOTO DE PERFIL =====
-    @DeleteMapping("/profile/image")
-    fun deleteProfileImage(
-        @RequestParam userId: Long
-    ): UserResponse {
-        return userService.deleteProfileImage(userId)
-    }
 }

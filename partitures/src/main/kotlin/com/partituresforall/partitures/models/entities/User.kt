@@ -17,7 +17,5 @@ data class User(
     @Column(length = 500)
     var bio: String? = null,
 
-    @Column(name = "profile_image_url", length = 255)
-    var profileImageUrl: String? = null
 
 ) : BaseEntity()

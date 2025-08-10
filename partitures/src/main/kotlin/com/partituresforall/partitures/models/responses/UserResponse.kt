@@ -7,7 +7,6 @@ data class UserResponse(
     val name: String,
     val email: String,
     val bio: String?,
-    val profileImageUrl: String?,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime
 )

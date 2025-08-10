@@ -27,20 +27,8 @@ class FileService {
         "application/pdf"
     )
 
-    private val allowedImageContentTypes = setOf(
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/webp"
-    )
-
-    private val allowedImageExtensions = setOf(
-        "jpg", "jpeg", "png", "webp"
-    )
-
     // ===== LÍMITES DE TAMAÑO =====
     private val maxFileSize = 10 * 1024 * 1024L // 10MB para PDFs
-    private val maxImageSize = 5 * 1024 * 1024L // 5MB para imágenes
 
     @PostConstruct
     fun init() {
@@ -52,11 +40,6 @@ class FileService {
             }
 
             // Crear subdirectorios
-            val imagesPath = Paths.get(uploadDir, "images")
-            if (!Files.exists(imagesPath)) {
-                Files.createDirectories(imagesPath)
-            }
-
             val pdfsPath = Paths.get(uploadDir, "pdfs")
             if (!Files.exists(pdfsPath)) {
                 Files.createDirectories(pdfsPath)
@@ -88,21 +71,6 @@ class FileService {
         }
     }
 
-    // ===== ALMACENAR IMAGEN (NUEVO) =====
-    fun storeImageFile(file: MultipartFile): String {
-        validateImageFile(file)
-
-        val fileName = generateUniqueFileName(file.originalFilename ?: "image.jpg")
-        val subDir = "images"
-
-        return try {
-            val targetLocation = Paths.get(uploadDir, subDir).resolve(fileName)
-            Files.copy(file.inputStream, targetLocation, StandardCopyOption.REPLACE_EXISTING)
-            "$subDir/$fileName" // Retorna ruta relativa con subdirectorio
-        } catch (ex: IOException) {
-            throw FileStorageException("Could not store image file $fileName", ex)
-        }
-    }
 
     // ===== CARGAR ARCHIVO COMO RESOURCE =====
     fun loadFileAsResource(fileName: String): Resource {
@@ -164,26 +132,6 @@ class FileService {
         }
     }
 
-    private fun validateImageFile(file: MultipartFile) {
-        if (file.isEmpty) {
-            throw InvalidFileTypeException("Image file is empty")
-        }
-
-        if (file.size > maxImageSize) {
-            throw InvalidFileTypeException("Image size exceeds maximum allowed size of ${maxImageSize / (1024 * 1024)}MB")
-        }
-
-        val contentType = file.contentType
-        if (contentType !in allowedImageContentTypes) {
-            throw InvalidFileTypeException("Image type not allowed. Only JPG, PNG and WEBP images are accepted")
-        }
-
-        val originalFilename = file.originalFilename ?: ""
-        val extension = originalFilename.substringAfterLast(".", "").lowercase()
-        if (extension !in allowedImageExtensions) {
-            throw InvalidFileTypeException("Image must have .jpg, .png or .webp extension")
-        }
-    }
 
     // ===== UTILIDADES =====
 
@@ -196,21 +144,6 @@ class FileService {
 
     fun getFileUrl(fileName: String): String {
         return "/api/files/$fileName"
-    }
-
-    // ===== MÉTODOS HELPER PARA IMÁGENES =====
-
-    fun getImageUrl(fileName: String): String {
-        // Si ya incluye el subdirectorio, usar tal como está
-        return if (fileName.startsWith("images/")) {
-            "/api/files/$fileName"
-        } else {
-            "/api/files/images/$fileName"
-        }
-    }
-
-    fun isImageFile(contentType: String?): Boolean {
-        return contentType in allowedImageContentTypes
     }
 
     fun isPdfFile(contentType: String?): Boolean {
