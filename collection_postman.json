@@ -1,0 +1,1437 @@
+{
+  "info": {
+    "_postman_id": "partitures-api-collection",
+    "name": "Partitures API - Complete Collection",
+    "description": "API completa para la gestión de partituras musicales con usuarios, autenticación y manejo de archivos PDF.\n\n## Base URL\n`{{base_url}}/api`\n\n## Funcionalidades\n- ✅ Gestión de usuarios (CRUD)\n- ✅ Autenticación (login)\n- ✅ Gestión de partituras con archivos PDF\n- ✅ Sistema de favoritos\n- ✅ Búsqueda y filtros avanzados\n- ✅ Descarga de archivos\n\n## Variables de entorno requeridas\n- `base_url`: URL base del servidor (ej: http://localhost:8080)\n- `user_id`: ID del usuario autenticado\n- `sheet_id`: ID de partitura para pruebas",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has user data\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('email');",
+                  "    pm.expect(jsonData).to.have.property('name');",
+                  "    ",
+                  "    // Save user ID for other requests",
+                  "    pm.environment.set(\"user_id\", jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"TestPass123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Autentica un usuario con email y contraseña.\n\n**Respuesta exitosa (200):**\n```json\n{\n  \"id\": 1,\n  \"name\": \"Juan Pérez\",\n  \"email\": \"test@example.com\",\n  \"bio\": \"Músico profesional\",\n  \"createdAt\": \"2024-01-15T10:30:00\",\n  \"updatedAt\": \"2024-01-15T10:30:00\"\n}\n```\n\n**Errores:**\n- `401` - Credenciales inválidas\n- `404` - Usuario no encontrado"
+          }
+        }
+      ],
+      "description": "Endpoints para autenticación de usuarios"
+    },
+    {
+      "name": "👤 Users Management",
+      "item": [
+        {
+          "name": "Create User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"User created successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData.email).to.eql(\"new.user@example.com\");",
+                  "    pm.expect(jsonData.name).to.eql(\"Nuevo Usuario\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nuevo Usuario\",\n  \"email\": \"new.user@example.com\",\n  \"password\": \"SecurePass123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ]
+            },
+            "description": "Crea un nuevo usuario en el sistema.\n\n**Validaciones de contraseña:**\n- Mínimo 8 caracteres\n- Al menos 1 número\n- Al menos 1 letra minúscula\n- Al menos 1 letra mayúscula\n\n**Errores:**\n- `400` - Contraseña inválida\n- `409` - Email ya registrado"
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"User data is complete\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('email');",
+                  "    pm.expect(jsonData).to.have.property('name');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.have.property('updatedAt');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Obtiene la información completa de un usuario por su ID.\n\n**Errores:**\n- `404` - Usuario no encontrado"
+          }
+        },
+        {
+          "name": "Update User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"User updated successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.name).to.eql(\"Updated Name\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"updated@example.com\",\n  \"password\": \"NewSecurePass123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Actualiza los datos de un usuario. Todos los campos son opcionales.\n\n**Errores:**\n- `400` - Contraseña inválida\n- `404` - Usuario no encontrado\n- `409` - Email ya en uso"
+          }
+        },
+        {
+          "name": "Delete User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Elimina un usuario del sistema.\n\n**Errores:**\n- `404` - Usuario no encontrado"
+          }
+        },
+        {
+          "name": "Get User Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Profile data is correct\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('name');",
+                  "    pm.expect(jsonData).to.have.property('bio');",
+                  "    pm.expect(jsonData).to.have.property('createdAt');",
+                  "    pm.expect(jsonData).to.not.have.property('email');",
+                  "    pm.expect(jsonData).to.not.have.property('password');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/{{user_id}}/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{user_id}}",
+                "profile"
+              ]
+            },
+            "description": "Obtiene el perfil público de un usuario (sin información sensible)."
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Profile updated successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.bio).to.eql(\"Nueva biografía actualizada\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Nombre Actualizado\",\n  \"bio\": \"Nueva biografía actualizada\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/profile?userId={{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "profile"
+              ],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{user_id}}"
+                }
+              ]
+            },
+            "description": "Actualiza el perfil del usuario autenticado (nombre y biografía)."
+          }
+        }
+      ],
+      "description": "Gestión completa de usuarios (CRUD)"
+    },
+    {
+      "name": "🎼 Sheets Management",
+      "item": [
+        {
+          "name": "Create Sheet with File",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Sheet created successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData.title).to.eql(\"Mi Primera Partitura\");",
+                  "    pm.expect(jsonData.artist).to.eql(\"Mozart\");",
+                  "    ",
+                  "    // Save sheet ID for other requests",
+                  "    pm.environment.set(\"sheet_id\", jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "partitura-ejemplo.pdf",
+                  "description": "Archivo PDF de la partitura (máximo 5MB)"
+                },
+                {
+                  "key": "title",
+                  "value": "Mi Primera Partitura",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Una hermosa partitura clásica",
+                  "type": "text"
+                },
+                {
+                  "key": "artist",
+                  "value": "Mozart",
+                  "type": "text"
+                },
+                {
+                  "key": "genre",
+                  "value": "Classical",
+                  "type": "text"
+                },
+                {
+                  "key": "instrument",
+                  "value": "Piano",
+                  "type": "text"
+                },
+                {
+                  "key": "isPublic",
+                  "value": "true",
+                  "type": "text"
+                },
+                {
+                  "key": "ownerId",
+                  "value": "{{user_id}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/sheets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets"
+              ]
+            },
+            "description": "Crea una nueva partitura subiendo un archivo PDF.\n\n**Validaciones del archivo:**\n- Solo archivos PDF (application/pdf)\n- Tamaño máximo: 5MB\n- Archivo no vacío\n\n**Errores:**\n- `400` - Archivo inválido o muy grande\n- `404` - Usuario propietario no encontrado"
+          }
+        },
+        {
+          "name": "Get Sheet by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Sheet data is complete\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('title');",
+                  "    pm.expect(jsonData).to.have.property('artist');",
+                  "    pm.expect(jsonData).to.have.property('pdfDownloadUrl');",
+                  "    pm.expect(jsonData).to.have.property('ownerId');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/{{sheet_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "{{sheet_id}}"
+              ]
+            },
+            "description": "Obtiene la información completa de una partitura por su ID."
+          }
+        },
+        {
+          "name": "Update Sheet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Sheet updated successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.title).to.eql(\"Título Actualizado\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Título Actualizado\",\n  \"description\": \"Descripción actualizada\",\n  \"artist\": \"Bach\",\n  \"genre\": \"Baroque\",\n  \"instrument\": \"Órgano\",\n  \"isPublic\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/sheets/{{sheet_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "{{sheet_id}}"
+              ]
+            },
+            "description": "Actualiza la información de una partitura. Todos los campos son opcionales."
+          }
+        },
+        {
+          "name": "Update Sheet File",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"File updated successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('pdfFilename');",
+                  "    pm.expect(jsonData).to.have.property('pdfSize');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "nueva-partitura.pdf",
+                  "description": "Nuevo archivo PDF para reemplazar el existente"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/sheets/{{sheet_id}}/file",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "{{sheet_id}}",
+                "file"
+              ]
+            },
+            "description": "Actualiza únicamente el archivo PDF de una partitura existente."
+          }
+        },
+        {
+          "name": "Delete Sheet",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/{{sheet_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "{{sheet_id}}"
+              ]
+            },
+            "description": "Elimina una partitura y todas sus relaciones con usuarios."
+          }
+        }
+      ],
+      "description": "Gestión completa de partituras (CRUD)"
+    },
+    {
+      "name": "📄 PDF Management",
+      "item": [
+        {
+          "name": "View Sheet PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Content-Type is PDF\", function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
+                  "});",
+                  "",
+                  "pm.test(\"Content-Disposition is inline\", function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Disposition')).to.include('inline');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/{{sheet_id}}/pdf",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "{{sheet_id}}",
+                "pdf"
+              ]
+            },
+            "description": "Visualiza el PDF de una partitura en el navegador (inline)."
+          }
+        },
+        {
+          "name": "Download Sheet PDF",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Content-Type is PDF\", function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
+                  "});",
+                  "",
+                  "pm.test(\"Content-Disposition is attachment\", function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Disposition')).to.include('attachment');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/{{sheet_id}}/pdf/download",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "{{sheet_id}}",
+                "pdf",
+                "download"
+              ]
+            },
+            "description": "Descarga el PDF de una partitura como archivo adjunto."
+          }
+        }
+      ],
+      "description": "Gestión de archivos PDF de partituras"
+    },
+    {
+      "name": "🔍 Search & Discovery",
+      "item": [
+        {
+          "name": "Get Public Sheets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is array\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test(\"Each sheet has required fields\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.length > 0) {",
+                  "        pm.expect(jsonData[0]).to.have.property('id');",
+                  "        pm.expect(jsonData[0]).to.have.property('title');",
+                  "        pm.expect(jsonData[0]).to.have.property('isPublic');",
+                  "        pm.expect(jsonData[0].isPublic).to.be.true;",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/public",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "public"
+              ]
+            },
+            "description": "Obtiene todas las partituras marcadas como públicas."
+          }
+        },
+        {
+          "name": "Search Sheets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is array\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/search?q=mozart",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "mozart",
+                  "description": "Término de búsqueda"
+                }
+              ]
+            },
+            "description": "Busca partituras por título, artista o descripción."
+          }
+        },
+        {
+          "name": "Advanced Search",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is array\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/search/advanced?searchTerm=sonata&artist=beethoven&genre=Classical&instrument=Piano&sortBy=title",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "search",
+                "advanced"
+              ],
+              "query": [
+                {
+                  "key": "searchTerm",
+                  "value": "sonata",
+                  "description": "Término de búsqueda (opcional)"
+                },
+                {
+                  "key": "artist",
+                  "value": "beethoven",
+                  "description": "Filtro por artista (opcional)"
+                },
+                {
+                  "key": "genre",
+                  "value": "Classical",
+                  "description": "Filtro por género (opcional)"
+                },
+                {
+                  "key": "instrument",
+                  "value": "Piano",
+                  "description": "Filtro por instrumento (opcional)"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "title",
+                  "description": "Ordenamiento: title, artist, recent"
+                }
+              ]
+            },
+            "description": "Búsqueda avanzada con múltiples filtros y ordenamiento."
+          }
+        },
+        {
+          "name": "Get Sheets by Genre",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/genre/Classical",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "genre",
+                "Classical"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Sheets by Instrument",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/instrument/Piano",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "instrument",
+                "Piano"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Sheets by Artist",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/artist/Mozart",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "artist",
+                "Mozart"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Recent Sheets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/recent",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "recent"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Trending Sheets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/trending",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "trending"
+              ]
+            }
+          }
+        }
+      ],
+      "description": "Búsqueda y descubrimiento de partituras"
+    },
+    {
+      "name": "🎯 Filters & Metadata",
+      "item": [
+        {
+          "name": "Get Available Genres",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is array of strings\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "    if (jsonData.length > 0) {",
+                  "        pm.expect(jsonData[0]).to.be.a('string');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/filters/genres",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "filters",
+                "genres"
+              ]
+            },
+            "description": "Obtiene todos los géneros musicales disponibles en partituras públicas."
+          }
+        },
+        {
+          "name": "Get Available Instruments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is array of strings\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/filters/instruments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "filters",
+                "instruments"
+              ]
+            },
+            "description": "Obtiene todos los instrumentos disponibles en partituras públicas."
+          }
+        },
+        {
+          "name": "Get Available Artists",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is array of strings\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/filters/artists",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "filters",
+                "artists"
+              ]
+            },
+            "description": "Obtiene todos los artistas disponibles en partituras públicas."
+          }
+        }
+      ],
+      "description": "Metadatos y filtros disponibles"
+    },
+    {
+      "name": "⭐ Favorites System",
+      "item": [
+        {
+          "name": "Add to Favorites",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/{{sheet_id}}/favorites?userId={{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "{{sheet_id}}",
+                "favorites"
+              ],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{user_id}}"
+                }
+              ]
+            },
+            "description": "Añade una partitura a favoritos del usuario."
+          }
+        },
+        {
+          "name": "Remove from Favorites",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/{{sheet_id}}/favorites?userId={{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "{{sheet_id}}",
+                "favorites"
+              ],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{user_id}}"
+                }
+              ]
+            },
+            "description": "Quita una partitura de favoritos del usuario."
+          }
+        },
+        {
+          "name": "Get User Favorites",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is array\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/users/{{user_id}}/favorites",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "users",
+                "{{user_id}}",
+                "favorites"
+              ]
+            },
+            "description": "Obtiene todas las partituras favoritas de un usuario."
+          }
+        },
+        {
+          "name": "Check if Sheet is Favorite",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is boolean\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.a('boolean');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/{{sheet_id}}/is-favorite?userId={{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "{{sheet_id}}",
+                "is-favorite"
+              ],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{user_id}}"
+                }
+              ]
+            },
+            "description": "Verifica si una partitura específica está en favoritos del usuario."
+          }
+        }
+      ],
+      "description": "Sistema de favoritos de usuarios"
+    },
+    {
+      "name": "👤 User Collections",
+      "item": [
+        {
+          "name": "Get User Owned Sheets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is array\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test(\"All sheets belong to user\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    jsonData.forEach(function(sheet) {",
+                  "        pm.expect(sheet.ownerId).to.eql(parseInt(pm.environment.get('user_id')));",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sheets/users/{{user_id}}/owned",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sheets",
+                "users",
+                "{{user_id}}",
+                "owned"
+              ]
+            },
+            "description": "Obtiene todas las partituras creadas por un usuario específico."
+          }
+        }
+      ],
+      "description": "Colecciones de partituras de usuarios"
+    },
+    {
+      "name": "📁 File Management",
+      "item": [
+        {
+          "name": "Download File (Generic)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Content-Disposition is inline\", function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Disposition')).to.include('inline');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/files/example-file.pdf",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "files",
+                "example-file.pdf"
+              ]
+            },
+            "description": "Descarga un archivo genérico con disposición inline.\n\n**Nota:** Reemplaza 'example-file.pdf' con el nombre real del archivo."
+          }
+        },
+        {
+          "name": "Download File as Attachment",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/files/example-file.pdf/download",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "files",
+                "example-file.pdf",
+                "download"
+              ]
+            },
+            "description": "Descarga un archivo genérico como adjunto (fuerza descarga)."
+          }
+        },
+        {
+          "name": "Get PDF File",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/files/pdfs/example.pdf",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "files",
+                "pdfs",
+                "example.pdf"
+              ]
+            },
+            "description": "Obtiene un archivo PDF específico desde el directorio de PDFs."
+          }
+        },
+        {
+          "name": "Download PDF File",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/files/pdfs/example.pdf/download",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "files",
+                "pdfs",
+                "example.pdf",
+                "download"
+              ]
+            },
+            "description": "Descarga un archivo PDF específico como adjunto."
+          }
+        }
+      ],
+      "description": "Gestión genérica de archivos"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global pre-request script",
+          "console.log('Making request to: ' + pm.request.url.toString());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test script",
+          "pm.test('Response time is reasonable', function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});",
+          "",
+          "pm.test('Response has correct headers', function () {",
+          "    if (pm.response.headers.get('Content-Type')) {",
+          "        pm.expect(pm.response.headers.get('Content-Type')).to.be.oneOf([",
+          "            'application/json',",
+          "            'application/json;charset=UTF-8',",
+          "            'application/pdf',",
+          "            'application/octet-stream'",
+          "        ].map(type => pm.expect.stringMatching(new RegExp(type))));",
+          "    }",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "description": "URL base del servidor API"
+    },
+    {
+      "key": "user_id",
+      "value": "1",
+      "description": "ID del usuario para pruebas (se actualiza automáticamente en login)"
+    },
+    {
+      "key": "sheet_id",
+      "value": "1",
+      "description": "ID de partitura para pruebas (se actualiza automáticamente al crear)"
+    }
+  ]
+}
