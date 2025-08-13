@@ -278,7 +278,9 @@ class SheetServiceTest {
         `when`(sheetRepository.findById(1L)).thenReturn(Optional.of(sheet))
         `when`(userSheetRepository.findBySheetIdAndIsOwner(1L, true)).thenReturn(userSheet)
         `when`(sheetRepository.save(any(Sheet::class.java))).thenReturn(sheet)
-        `when`(fileValidationService.formatFileSize(1024L)).thenReturn("1.00 KB") // ✅ CORREGIDO: usar valor específico
+
+        // ✅ SOLUCIÓN: Usar any() para cubrir cualquier valor que se pase a formatFileSize
+        `when`(fileValidationService.formatFileSize(any())).thenReturn("1.00 KB")
 
         doNothing().`when`(fileValidationService).validatePdfFile(file)
 
