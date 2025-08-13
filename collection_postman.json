@@ -1,142 +1,54 @@
-# 🎵 Partituras Musicales - API Spring Boot
-
-Aplicación backend para la gestión de partituras musicales, desarrollada con **Spring Boot (Kotlin)**, **Spring Data JPA** y **PostgreSQL**.
-
+🎵 Partituras Musicales - API Spring Boot
+Aplicación backend para la gestión de partituras musicales, desarrollada con Spring Boot (Kotlin), Spring Data JPA y PostgreSQL.
 Sistema completo para subir, gestionar, buscar y compartir partituras musicales en formato PDF con funcionalidades avanzadas de búsqueda, favoritos y sistema de usuarios.
 
----
+📋 Requisitos previos
 
-## 📋 Requisitos previos
+Java 21 (JDK 21)
+PostgreSQL 15 o superior
+Gradle 8 o superior
+Git (opcional)
 
-- **Java 21** (JDK 21)
-- **PostgreSQL 15** o superior
-- **Gradle 8** o superior
-- **Git** (opcional)
 
----
-
-## ⚙️ Configuración inicial
-
-### 1. Clonar el repositorio
-```bash
-git clone https://github.com/Anghelo-10-10/partitures_v2.git
+⚙️ Configuración inicial
+1. Clonar el repositorio
+bashgit clone https://github.com/Anghelo-10-10/partitures_v2.git
 cd partitures
-```
+2. Iniciar Base de Datos con Docker
+bashdocker-compose up -d
+3. Ejecutar el Proyecto
+bash./gradlew bootRun
+La aplicación se ejecuta en http://localhost:8080/
+⚠️ Nota: La app actualmente es solo API REST (sin interfaz gráfica). Se puede probar con herramientas como Postman, Insomnia o curl.
 
-### 2. Iniciar Base de Datos con Docker
-```bash
-docker-compose up -d
-```
+🗄️ Conexión a Base de Datos (PgAdmin)
+Configuración de conexión:
+CampoValorHostlocalhostPuerto5433UsuarioadminPasswordadminBase de Datospartitures_db
 
-### 3. Ejecutar el Proyecto
-```bash
-./gradlew bootRun
-```
+🚀 API Endpoints
+🔐 Autenticación (/api/auth)
+MétodoEndpointDescripciónBodyPOST/loginIniciar sesión{"email": "user@email.com", "password": "password"}
+👤 Usuarios (/api/users)
+MétodoEndpointDescripciónBody/ParamsPOST/Crear usuario{"name": "Usuario", "email": "user@email.com", "password": "Password123"}GET/{id}Obtener usuario por ID-PUT/{id}Actualizar usuario{"name": "Nuevo Nombre", "email": "nuevo@email.com"}DELETE/{id}Eliminar usuario-GET/{id}/profileObtener perfil público-PUT/profileActualizar mi perfil?userId=1 + {"name": "Nombre", "bio": "Mi biografía"}
+🎼 Partituras (/api/sheets)
+📝 CRUD Básico
+MétodoEndpointDescripciónContent-TypePOST/Crear partitura con archivo PDFmultipart/form-dataGET/{id}Obtener partitura por ID-PUT/{id}Actualizar metadatos de partituraapplication/jsonPUT/{id}/fileActualizar archivo PDFmultipart/form-dataDELETE/{id}Eliminar partitura-
+📄 Visualización y Descarga de PDFs
+MétodoEndpointDescripciónRespuestaGET/{id}/pdfVer PDF en navegadorPDF inlineGET/{id}/pdf/downloadDescargar PDFPDF attachment
+🔍 Búsqueda y Filtros
+MétodoEndpointDescripciónParámetrosGET/publicPartituras públicas-GET/searchBúsqueda simple?q=terminoGET/search/advancedBúsqueda avanzada?searchTerm=&artist=&genre=&instrument=&sortBy=recentGET/genre/{genre}Filtrar por género-GET/instrument/{instrument}Filtrar por instrumento-GET/artist/{artist}Filtrar por artista-GET/recentPartituras recientes-GET/trendingPartituras trending-
+📊 Filtros Disponibles
+MétodoEndpointDescripciónRespuestaGET/filters/genresGéneros disponibles["Rock", "Jazz", "Classical"]GET/filters/instrumentsInstrumentos disponibles["Piano", "Guitar", "Violin"]GET/filters/artistsArtistas disponibles["Artist 1", "Artist 2"]
+👤 Gestión por Usuario
+MétodoEndpointDescripciónParámetrosGET/users/{userId}/ownedPartituras propias del usuario-GET/users/{userId}/favoritesPartituras favoritas del usuario-
+⭐ Sistema de Favoritos
+MétodoEndpointDescripciónParámetrosPOST/{sheetId}/favoritesAgregar a favoritos?userId=1DELETE/{sheetId}/favoritesQuitar de favoritos?userId=1GET/{sheetId}/is-favoriteVerificar si es favorito?userId=1
+📁 Archivos (/api/files)
+MétodoEndpointDescripciónRespuestaGET/{fileName}Ver archivoArchivo inlineGET/{fileName}/downloadDescargar archivoArchivo attachmentGET/pdfs/{fileName}Ver PDF específicoPDF inlineGET/pdfs/{fileName}/downloadDescargar PDF específicoPDF attachment
 
-La aplicación se ejecuta en **http://localhost:8080/**
-
-⚠️ **Nota**: La app actualmente es solo **API REST** (sin interfaz gráfica). Se puede probar con herramientas como **Postman**, **Insomnia** o **curl**.
-
----
-
-## 🗄️ Conexión a Base de Datos (PgAdmin)
-
-**Configuración de conexión:**
-
-| Campo | Valor |
-|-------|-------|
-| **Host** | `localhost` |
-| **Puerto** | `5433` |
-| **Usuario** | `admin` |
-| **Password** | `admin` |
-| **Base de Datos** | `partitures_db` |
-
----
-
-## 🚀 API Endpoints
-
-### 🔐 **Autenticación** (`/api/auth`)
-
-| Método | Endpoint | Descripción | Body |
-|--------|----------|-------------|------|
-| `POST` | `/login` | Iniciar sesión | `{"email": "user@email.com", "password": "password"}` |
-
-### 👤 **Usuarios** (`/api/users`)
-
-| Método | Endpoint | Descripción | Body/Params |
-|--------|----------|-------------|-------------|
-| `POST` | `/` | Crear usuario | `{"name": "Usuario", "email": "user@email.com", "password": "Password123"}` |
-| `GET` | `/{id}` | Obtener usuario por ID | - |
-| `PUT` | `/{id}` | Actualizar usuario | `{"name": "Nuevo Nombre", "email": "nuevo@email.com"}` |
-| `DELETE` | `/{id}` | Eliminar usuario | - |
-| `GET` | `/{id}/profile` | Obtener perfil público | - |
-| `PUT` | `/profile` | Actualizar mi perfil | `?userId=1` + `{"name": "Nombre", "bio": "Mi biografía"}` |
-
-### 🎼 **Partituras** (`/api/sheets`)
-
-#### 📝 **CRUD Básico**
-| Método | Endpoint | Descripción | Content-Type |
-|--------|----------|-------------|--------------|
-| `POST` | `/` | **Crear partitura con archivo PDF** | `multipart/form-data` |
-| `GET` | `/{id}` | Obtener partitura por ID | - |
-| `PUT` | `/{id}` | Actualizar metadatos de partitura | `application/json` |
-| `PUT` | `/{id}/file` | Actualizar archivo PDF | `multipart/form-data` |
-| `DELETE` | `/{id}` | Eliminar partitura | - |
-
-#### 📄 **Visualización y Descarga de PDFs**
-| Método | Endpoint | Descripción | Respuesta |
-|--------|----------|-------------|-----------|
-| `GET` | `/{id}/pdf` | **Ver PDF en navegador** | PDF inline |
-| `GET` | `/{id}/pdf/download` | **Descargar PDF** | PDF attachment |
-
-#### 🔍 **Búsqueda y Filtros**
-| Método | Endpoint | Descripción | Parámetros |
-|--------|----------|-------------|------------|
-| `GET` | `/public` | Partituras públicas | - |
-| `GET` | `/search` | Búsqueda simple | `?q=termino` |
-| `GET` | `/search/advanced` | **Búsqueda avanzada** | `?searchTerm=&artist=&genre=&instrument=&sortBy=recent` |
-| `GET` | `/genre/{genre}` | Filtrar por género | - |
-| `GET` | `/instrument/{instrument}` | Filtrar por instrumento | - |
-| `GET` | `/artist/{artist}` | Filtrar por artista | - |
-| `GET` | `/recent` | Partituras recientes | - |
-| `GET` | `/trending` | Partituras trending | - |
-
-#### 📊 **Filtros Disponibles**
-| Método | Endpoint | Descripción | Respuesta |
-|--------|----------|-------------|-----------|
-| `GET` | `/filters/genres` | Géneros disponibles | `["Rock", "Jazz", "Classical"]` |
-| `GET` | `/filters/instruments` | Instrumentos disponibles | `["Piano", "Guitar", "Violin"]` |
-| `GET` | `/filters/artists` | Artistas disponibles | `["Artist 1", "Artist 2"]` |
-
-#### 👤 **Gestión por Usuario**
-| Método | Endpoint | Descripción | Parámetros |
-|--------|----------|-------------|------------|
-| `GET` | `/users/{userId}/owned` | Partituras propias del usuario | - |
-| `GET` | `/users/{userId}/favorites` | Partituras favoritas del usuario | - |
-
-#### ⭐ **Sistema de Favoritos**
-| Método | Endpoint | Descripción | Parámetros |
-|--------|----------|-------------|------------|
-| `POST` | `/{sheetId}/favorites` | Agregar a favoritos | `?userId=1` |
-| `DELETE` | `/{sheetId}/favorites` | Quitar de favoritos | `?userId=1` |
-| `GET` | `/{sheetId}/is-favorite` | Verificar si es favorito | `?userId=1` |
-
-### 📁 **Archivos** (`/api/files`)
-
-| Método | Endpoint | Descripción | Respuesta |
-|--------|----------|-------------|-----------|
-| `GET` | `/{fileName}` | Ver archivo | Archivo inline |
-| `GET` | `/{fileName}/download` | Descargar archivo | Archivo attachment |
-| `GET` | `/pdfs/{fileName}` | Ver PDF específico | PDF inline |
-| `GET` | `/pdfs/{fileName}/download` | Descargar PDF específico | PDF attachment |
-
----
-
-## 📝 **Ejemplo de Uso - Crear Partitura**
-
-### Request
-```http
-POST /api/sheets
+📝 Ejemplo de Uso - Crear Partitura
+Request
+httpPOST /api/sheets
 Content-Type: multipart/form-data
 
 file: [archivo.pdf]
@@ -147,11 +59,8 @@ genre: "Classical"
 instrument: "Piano"
 isPublic: true
 ownerId: 1
-```
-
-### Response
-```json
-{
+Response
+json{
 "id": 1,
 "title": "Moonlight Sonata",
 "description": "Sonata No. 14 de Beethoven",
@@ -168,52 +77,51 @@ ownerId: 1
 "createdAt": "2024-01-15T10:30:00",
 "updatedAt": "2024-01-15T10:30:00"
 }
-```
 
----
+⚡ Características Técnicas Destacadas
+🔍 Sistema de Búsqueda Avanzado
 
-## ⚡ **Características Técnicas Destacadas**
+Búsqueda por múltiples campos: título, artista, descripción
+Filtros combinables: género, instrumento, artista
+Ordenamiento: por fecha, título, artista
+Búsqueda insensible a mayúsculas/minúsculas
 
-### 🔍 **Sistema de Búsqueda Avanzado**
-- **Búsqueda por múltiples campos**: título, artista, descripción
-- **Filtros combinables**: género, instrumento, artista
-- **Ordenamiento**: por fecha, título, artista
-- **Búsqueda insensible a mayúsculas/minúsculas**
+📁 Gestión de Archivos PDF
 
-### 📁 **Gestión de Archivos PDF**
-- **Validación estricta**: tamaño (máx 5MB), tipo MIME, magic bytes
-- **Almacenamiento**: PDFs guardados como BYTEA en PostgreSQL
-- **Optimización**: Lazy loading para archivos grandes
-- **URLs dinámicas**: visualización y descarga
+Validación estricta: tamaño (máx 5MB), tipo MIME, magic bytes
+Almacenamiento: PDFs guardados como BYTEA en PostgreSQL
+Optimización: Lazy loading para archivos grandes
+URLs dinámicas: visualización y descarga
 
-### 👥 **Sistema de Usuarios y Permisos**
-- **Autenticación**: Email + contraseña con validación robusta
-- **Encriptación**: BCrypt para passwords
-- **Propietarios**: Solo el owner puede modificar/eliminar
-- **Perfiles**: Información pública + biografía
+👥 Sistema de Usuarios y Permisos
 
-### ⭐ **Sistema de Favoritos Inteligente**
-- **Relación Many-to-Many**: UserSheet con metadata
-- **Estados duales**: `isOwner` (propietario) + `isFavorite` (favorito)
-- **Gestión flexible**: Agregar/quitar favoritos independientemente
+Autenticación: Email + contraseña con validación robusta
+Encriptación: BCrypt para passwords
+Propietarios: Solo el owner puede modificar/eliminar
+Perfiles: Información pública + biografía
 
-### 🚀 **Optimizaciones de Performance**
-- **Anti N+1 Queries**: Batch loading de propietarios
-- **Lazy Loading**: Contenido PDF cargado bajo demanda
-- **Índices de BD**: Optimizados para búsquedas frecuentes
-- **Queries nativas**: PostgreSQL ILIKE para búsquedas eficientes
+⭐ Sistema de Favoritos Inteligente
 
-### ⚠️ **Manejo de Errores Robusto**
-- **Excepciones semánticas**: Por dominio (users, sheets, files)
-- **Códigos HTTP correctos**: 404, 400, 409, 403, 500
-- **Mensajes contextuales**: Con información específica del error
-- **GlobalExceptionHandler**: Manejo centralizado
+Relación Many-to-Many: UserSheet con metadata
+Estados duales: isOwner (propietario) + isFavorite (favorito)
+Gestión flexible: Agregar/quitar favoritos independientemente
 
----
+🚀 Optimizaciones de Performance
 
-## 🗂️ **Estructura del Proyecto**
+Anti N+1 Queries: Batch loading de propietarios
+Lazy Loading: Contenido PDF cargado bajo demanda
+Índices de BD: Optimizados para búsquedas frecuentes
+Queries nativas: PostgreSQL ILIKE para búsquedas eficientes
 
-```
+⚠️ Manejo de Errores Robusto
+
+Excepciones semánticas: Por dominio (users, sheets, files)
+Códigos HTTP correctos: 404, 400, 409, 403, 500
+Mensajes contextuales: Con información específica del error
+GlobalExceptionHandler: Manejo centralizado
+
+
+🗂️ Estructura del Proyecto
 src/main/kotlin/com/partituresforall/partitures/
 ├── 🎮 controllers/          # API REST endpoints
 │   ├── AuthController       # Autenticación
@@ -238,28 +146,13 @@ src/main/kotlin/com/partituresforall/partitures/
 │   └── handlers/            # GlobalExceptionHandler
 └── ⚙️ config/               # Configuraciones
 └── PasswordEncoder      # Encoder BCrypt personalizado
-```
 
----
+🛠️ Configuración Técnica
+TecnologíaVersiónPropósitoSpring Boot3.5.0Framework principalKotlin1.9+Lenguaje de programaciónPostgreSQL15Base de datos principalHibernate6.6.15ORM (Object-Relational Mapping)Docker-Contenedor de PostgreSQLBCrypt-Encriptación de contraseñas
 
-## 🛠️ **Configuración Técnica**
-
-| Tecnología | Versión | Propósito |
-|------------|---------|-----------|
-| **Spring Boot** | 3.5.0 | Framework principal |
-| **Kotlin** | 1.9+ | Lenguaje de programación |
-| **PostgreSQL** | 15 | Base de datos principal |
-| **Hibernate** | 6.6.15 | ORM (Object-Relational Mapping) |
-| **Docker** | - | Contenedor de PostgreSQL |
-| **BCrypt** | - | Encriptación de contraseñas |
-
----
-
-## 🔧 **Configuración de Desarrollo**
-
-### Variables de Entorno (`application.yml`)
-```yaml
-spring:
+🔧 Configuración de Desarrollo
+Variables de Entorno (application.yml)
+yamlspring:
 datasource:
 url: jdbc:postgresql://localhost:5433/partitures_db
 username: admin
@@ -273,11 +166,8 @@ max-request-size: 10MB
 app:
 file:
 upload-dir: uploads
-```
-
-### Docker Compose
-```yaml
-services:
+Docker Compose
+yamlservices:
 postgres:
 image: postgres:15
 environment:
@@ -286,29 +176,22 @@ POSTGRES_USER: admin
 POSTGRES_PASSWORD: admin
 ports:
 - "5433:5432"
-```
 
----
+🚀 Próximas Mejoras Planeadas
 
-## 🚀 **Próximas Mejoras Planeadas**
+Autenticación JWT + Spring Security
+Validaciones @Valid en controllers
+Paginación para endpoints de listas
+Tests unitarios e integración
+Documentación Swagger/OpenAPI
+Cache Redis para consultas frecuentes
+Métricas y observabilidad
+Interfaz web frontend
 
-- [ ] **Autenticación JWT** + Spring Security
-- [ ] **Validaciones @Valid** en controllers
-- [ ] **Paginación** para endpoints de listas
-- [ ] **Tests unitarios** e integración
-- [ ] **Documentación Swagger/OpenAPI**
-- [ ] **Cache Redis** para consultas frecuentes
-- [ ] **Métricas y observabilidad**
-- [ ] **Interfaz web frontend**
 
----
-
-## 🧪 **Testing Manual**
-
-Puedes probar la API usando **Postman**, **Insomnia** o **curl**:
-
-```bash
-# Crear usuario
+🧪 Testing Manual
+Puedes probar la API usando Postman, Insomnia o curl:
+bash# Crear usuario
 curl -X POST http://localhost:8080/api/users \
 -H "Content-Type: application/json" \
 -d '{"name":"Test User","email":"test@example.com","password":"Password123"}'
@@ -320,16 +203,12 @@ curl -X POST http://localhost:8080/api/auth/login \
 
 # Obtener partituras públicas
 curl http://localhost:8080/api/sheets/public
-```
 
----
+📞 Contacto y Contribución
 
-## 📞 **Contacto y Contribución**
+Repositorio: GitHub - partitures_v2
+Autor: Anghelo-10-10
+Stack: Kotlin + Spring Boot + PostgreSQL
 
-- **Repositorio**: [GitHub - partitures_v2](https://github.com/Anghelo-10-10/partitures_v2)
-- **Autor**: Anghelo-10-10
-- **Stack**: Kotlin + Spring Boot + PostgreSQL
 
----
-
-**¡La API está lista para ser consumida por cualquier frontend o aplicación móvil!** 🎵✨
+¡La API está lista para ser consumida por cualquier frontend o aplicación móvil! 🎵✨
