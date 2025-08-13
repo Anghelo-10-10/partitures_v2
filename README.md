@@ -1,72 +1,199 @@
-🎵 Partituras Musicales - API Spring Boot
-Aplicación backend para la gestión de partituras musicales, desarrollada con Spring Boot (Kotlin), Spring Data JPA y PostgreSQL.
-Sistema completo para subir, gestionar, buscar y compartir partituras musicales en formato PDF con funcionalidades avanzadas de búsqueda, favoritos y sistema de usuarios.
+# 🎵 Partituras Musicales - API Spring Boot
 
-📋 Requisitos previos
+> Sistema completo para gestión de partituras musicales desarrollado con Spring Boot (Kotlin), Spring Data JPA y PostgreSQL.
 
-Java 21 (JDK 21)
-PostgreSQL 15 o superior
-Gradle 8 o superior
-Git (opcional)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.0-brightgreen)
+![Kotlin](https://img.shields.io/badge/Kotlin-1.9+-purple)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 
+## ✨ Características Principales
 
-⚙️ Configuración inicial
-1. Clonar el repositorio
-bashgit clone https://github.com/Anghelo-10-10/partitures_v2.git
+- 📤 **Subida de partituras** en formato PDF con validación estricta
+- 🔍 **Búsqueda avanzada** por título, artista, género e instrumento  
+- 👥 **Sistema de usuarios** con autenticación y perfiles
+- ⭐ **Favoritos** para gestión personal de partituras
+- 📄 **Visualización y descarga** de PDFs
+- 🚀 **Optimización anti-N+1** queries para alta performance
+- ⚠️ **Manejo robusto de errores** con códigos HTTP semánticos
+
+## 📋 Requisitos Previos
+
+- Java 21 (JDK 21)
+- PostgreSQL 15 o superior
+- Gradle 8 o superior
+- Docker (opcional, para base de datos)
+
+## 🚀 Instalación y Configuración
+
+### 1. Clonar el Repositorio
+
+```bash
+git clone https://github.com/Anghelo-10-10/partitures_v2.git
 cd partitures
-2. Iniciar Base de Datos con Docker
-bashdocker-compose up -d
-3. Ejecutar el Proyecto
-bash./gradlew bootRun
-La aplicación se ejecuta en http://localhost:8080/
-⚠️ Nota: La app actualmente es solo API REST (sin interfaz gráfica). Se puede probar con herramientas como Postman, Insomnia o curl.
+```
 
-🗄️ Conexión a Base de Datos (PgAdmin)
-Configuración de conexión:
-CampoValorHostlocalhostPuerto5433UsuarioadminPasswordadminBase de Datospartitures_db
+### 2. Configurar Base de Datos
 
-🚀 API Endpoints
-🔐 Autenticación (/api/auth)
-MétodoEndpointDescripciónBodyPOST/loginIniciar sesión{"email": "user@email.com", "password": "password"}
-👤 Usuarios (/api/users)
-MétodoEndpointDescripciónBody/ParamsPOST/Crear usuario{"name": "Usuario", "email": "user@email.com", "password": "Password123"}GET/{id}Obtener usuario por ID-PUT/{id}Actualizar usuario{"name": "Nuevo Nombre", "email": "nuevo@email.com"}DELETE/{id}Eliminar usuario-GET/{id}/profileObtener perfil público-PUT/profileActualizar mi perfil?userId=1 + {"name": "Nombre", "bio": "Mi biografía"}
-🎼 Partituras (/api/sheets)
-📝 CRUD Básico
-MétodoEndpointDescripciónContent-TypePOST/Crear partitura con archivo PDFmultipart/form-dataGET/{id}Obtener partitura por ID-PUT/{id}Actualizar metadatos de partituraapplication/jsonPUT/{id}/fileActualizar archivo PDFmultipart/form-dataDELETE/{id}Eliminar partitura-
-📄 Visualización y Descarga de PDFs
-MétodoEndpointDescripciónRespuestaGET/{id}/pdfVer PDF en navegadorPDF inlineGET/{id}/pdf/downloadDescargar PDFPDF attachment
-🔍 Búsqueda y Filtros
-MétodoEndpointDescripciónParámetrosGET/publicPartituras públicas-GET/searchBúsqueda simple?q=terminoGET/search/advancedBúsqueda avanzada?searchTerm=&artist=&genre=&instrument=&sortBy=recentGET/genre/{genre}Filtrar por género-GET/instrument/{instrument}Filtrar por instrumento-GET/artist/{artist}Filtrar por artista-GET/recentPartituras recientes-GET/trendingPartituras trending-
-📊 Filtros Disponibles
-MétodoEndpointDescripciónRespuestaGET/filters/genresGéneros disponibles["Rock", "Jazz", "Classical"]GET/filters/instrumentsInstrumentos disponibles["Piano", "Guitar", "Violin"]GET/filters/artistsArtistas disponibles["Artist 1", "Artist 2"]
-👤 Gestión por Usuario
-MétodoEndpointDescripciónParámetrosGET/users/{userId}/ownedPartituras propias del usuario-GET/users/{userId}/favoritesPartituras favoritas del usuario-
-⭐ Sistema de Favoritos
-MétodoEndpointDescripciónParámetrosPOST/{sheetId}/favoritesAgregar a favoritos?userId=1DELETE/{sheetId}/favoritesQuitar de favoritos?userId=1GET/{sheetId}/is-favoriteVerificar si es favorito?userId=1
-📁 Archivos (/api/files)
-MétodoEndpointDescripciónRespuestaGET/{fileName}Ver archivoArchivo inlineGET/{fileName}/downloadDescargar archivoArchivo attachmentGET/pdfs/{fileName}Ver PDF específicoPDF inlineGET/pdfs/{fileName}/downloadDescargar PDF específicoPDF attachment
+**Opción A: Con Docker (Recomendado)**
+```bash
+docker-compose up -d
+```
 
-📝 Ejemplo de Uso - Crear Partitura
-Request
-httpPOST /api/sheets
+**Opción B: PostgreSQL Local**
+- Crear base de datos: `partitures_db`
+- Usuario: `admin` / Password: `admin`
+- Puerto: `5433`
+
+### 3. Ejecutar la Aplicación
+
+```bash
+./gradlew bootRun
+```
+
+La API estará disponible en: `http://localhost:8080`
+
+## 🔗 Conexión a Base de Datos (PgAdmin)
+
+| Parámetro | Valor |
+|-----------|-------|
+| Host | localhost |
+| Puerto | 5433 |
+| Usuario | admin |
+| Password | admin |
+| Base de Datos | partitures_db |
+
+## 📚 Documentación de la API
+
+### Autenticación
+
+#### Iniciar Sesión
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "usuario@email.com",
+  "password": "mipassword"
+}
+```
+
+### Usuarios
+
+#### Crear Usuario
+```http
+POST /api/users
+Content-Type: application/json
+
+{
+  "name": "Juan Pérez",
+  "email": "juan@email.com", 
+  "password": "Password123"
+}
+```
+
+#### Obtener Usuario
+```http
+GET /api/users/{id}
+```
+
+#### Actualizar Perfil
+```http
+PUT /api/users/profile?userId=1
+Content-Type: application/json
+
+{
+  "name": "Nuevo Nombre",
+  "bio": "Mi biografía musical"
+}
+```
+
+### Partituras
+
+#### Subir Partitura
+```http
+POST /api/sheets
 Content-Type: multipart/form-data
 
 file: [archivo.pdf]
 title: "Moonlight Sonata"
 description: "Sonata No. 14 de Beethoven"
-artist: "Ludwig van Beethoven"
+artist: "Ludwig van Beethoven" 
 genre: "Classical"
 instrument: "Piano"
 isPublic: true
 ownerId: 1
-Response
-json{
+```
+
+#### Obtener Partituras Públicas
+```http
+GET /api/sheets/public
+```
+
+#### Búsqueda Avanzada
+```http
+GET /api/sheets/search/advanced?searchTerm=beethoven&genre=Classical&instrument=Piano&sortBy=recent
+```
+
+#### Ver PDF en Navegador
+```http
+GET /api/sheets/{id}/pdf
+```
+
+#### Descargar PDF
+```http
+GET /api/sheets/{id}/pdf/download
+```
+
+### Favoritos
+
+#### Agregar a Favoritos
+```http
+POST /api/sheets/{sheetId}/favorites?userId=1
+```
+
+#### Obtener Favoritos del Usuario
+```http
+GET /api/sheets/users/{userId}/favorites
+```
+
+### Filtros y Búsqueda
+
+#### Obtener Géneros Disponibles
+```http
+GET /api/sheets/filters/genres
+```
+
+#### Obtener Instrumentos Disponibles  
+```http
+GET /api/sheets/filters/instruments
+```
+
+#### Filtrar por Género
+```http
+GET /api/sheets/genre/Classical
+```
+
+#### Filtrar por Instrumento
+```http
+GET /api/sheets/instrument/Piano
+```
+
+#### Partituras del Usuario
+```http
+GET /api/sheets/users/{userId}/owned
+```
+
+## 📊 Ejemplo de Respuesta
+
+```json
+{
   "id": 1,
   "title": "Moonlight Sonata",
   "description": "Sonata No. 14 de Beethoven",
   "artist": "Ludwig van Beethoven",
-  "genre": "Classical", 
-  "instrument": "Piano",
+  "genre": "Classical",
+  "instrument": "Piano", 
   "pdfFilename": "1698765432_abc12345.pdf",
   "pdfSize": 2048576,
   "pdfSizeMB": "2.0 MB",
@@ -77,97 +204,87 @@ json{
   "createdAt": "2024-01-15T10:30:00",
   "updatedAt": "2024-01-15T10:30:00"
 }
+```
 
-⚡ Características Técnicas Destacadas
-🔍 Sistema de Búsqueda Avanzado
+## 🏗️ Arquitectura del Proyecto
 
-Búsqueda por múltiples campos: título, artista, descripción
-Filtros combinables: género, instrumento, artista
-Ordenamiento: por fecha, título, artista
-Búsqueda insensible a mayúsculas/minúsculas
-
-📁 Gestión de Archivos PDF
-
-Validación estricta: tamaño (máx 5MB), tipo MIME, magic bytes
-Almacenamiento: PDFs guardados como BYTEA en PostgreSQL
-Optimización: Lazy loading para archivos grandes
-URLs dinámicas: visualización y descarga
-
-👥 Sistema de Usuarios y Permisos
-
-Autenticación: Email + contraseña con validación robusta
-Encriptación: BCrypt para passwords
-Propietarios: Solo el owner puede modificar/eliminar
-Perfiles: Información pública + biografía
-
-⭐ Sistema de Favoritos Inteligente
-
-Relación Many-to-Many: UserSheet con metadata
-Estados duales: isOwner (propietario) + isFavorite (favorito)
-Gestión flexible: Agregar/quitar favoritos independientemente
-
-🚀 Optimizaciones de Performance
-
-Anti N+1 Queries: Batch loading de propietarios
-Lazy Loading: Contenido PDF cargado bajo demanda
-Índices de BD: Optimizados para búsquedas frecuentes
-Queries nativas: PostgreSQL ILIKE para búsquedas eficientes
-
-⚠️ Manejo de Errores Robusto
-
-Excepciones semánticas: Por dominio (users, sheets, files)
-Códigos HTTP correctos: 404, 400, 409, 403, 500
-Mensajes contextuales: Con información específica del error
-GlobalExceptionHandler: Manejo centralizado
-
-
-🗂️ Estructura del Proyecto
+```
 src/main/kotlin/com/partituresforall/partitures/
-├── 🎮 controllers/          # API REST endpoints
-│   ├── AuthController       # Autenticación
-│   ├── UserController       # Gestión de usuarios
-│   ├── SheetController      # Gestión de partituras
-│   └── FileController       # Gestión de archivos
-├── 🧠 services/             # Lógica de negocio
-│   ├── UserService          # Operaciones de usuario
-│   ├── SheetService         # Operaciones de partituras
-│   ├── FileService          # Gestión de archivos
-│   └── FileValidationService # Validaciones centralizadas
-├── 🗄️ repositories/         # Acceso a datos (JPA)
-│   ├── UserRepository       # Consultas de usuario
-│   ├── SheetRepository      # Consultas de partituras
-│   └── UserSheetRepository  # Relación usuario-partitura
-├── 🏗️ models/               # Modelos de datos
-│   ├── entities/            # Entidades JPA (User, Sheet, UserSheet)
-│   ├── requests/            # DTOs de entrada
-│   └── responses/           # DTOs de salida
-├── ⚠️ exceptions/           # Manejo de errores
-│   ├── exceptions/          # Excepciones custom por dominio
-│   └── handlers/            # GlobalExceptionHandler
-└── ⚙️ config/               # Configuraciones
-    └── PasswordEncoder      # Encoder BCrypt personalizado
+├── controllers/          # Endpoints REST
+│   ├── AuthController    # Autenticación
+│   ├── UserController    # Gestión usuarios  
+│   ├── SheetController   # Gestión partituras
+│   └── FileController    # Gestión archivos
+├── services/             # Lógica de negocio
+│   ├── UserService       # Operaciones usuario
+│   ├── SheetService      # Operaciones partituras  
+│   └── FileService       # Gestión archivos
+├── repositories/         # Acceso a datos JPA
+│   ├── UserRepository    # Consultas usuario
+│   ├── SheetRepository   # Consultas partituras
+│   └── UserSheetRepository # Relaciones
+├── models/
+│   ├── entities/         # Entidades JPA
+│   ├── requests/         # DTOs entrada
+│   └── responses/        # DTOs salida
+├── exceptions/           # Manejo errores
+└── config/              # Configuraciones
+```
 
-🛠️ Configuración Técnica
-TecnologíaVersiónPropósitoSpring Boot3.5.0Framework principalKotlin1.9+Lenguaje de programaciónPostgreSQL15Base de datos principalHibernate6.6.15ORM (Object-Relational Mapping)Docker-Contenedor de PostgreSQLBCrypt-Encriptación de contraseñas
+## ⚡ Características Técnicas
 
-🔧 Configuración de Desarrollo
-Variables de Entorno (application.yml)
-yamlspring:
+### Sistema de Validación
+- **Archivos PDF**: Validación de tamaño (máx 5MB), tipo MIME y magic bytes
+- **Contraseñas**: Mínimo 8 caracteres, mayúsculas, minúsculas y números
+- **Emails**: Validación de formato y unicidad
+
+### Optimizaciones de Performance
+- **Anti N+1 Queries**: Batch loading de relaciones
+- **Lazy Loading**: Contenido PDF cargado bajo demanda  
+- **Índices de BD**: Optimizados para búsquedas frecuentes
+- **Queries Nativas**: PostgreSQL ILIKE para búsquedas eficientes
+
+### Seguridad
+- **Encriptación BCrypt** para contraseñas
+- **Validación de archivos** con magic bytes
+- **Control de acceso** por propietario
+- **Manejo seguro** de multipart uploads
+
+## 🛠️ Stack Tecnológico
+
+| Tecnología | Versión | Propósito |
+|------------|---------|-----------|
+| Spring Boot | 3.5.0 | Framework principal |
+| Kotlin | 1.9+ | Lenguaje de programación |
+| PostgreSQL | 15 | Base de datos |
+| Hibernate | 6.6.15 | ORM |
+| Docker | latest | Contenedores |
+| BCrypt | - | Encriptación |
+
+## ⚙️ Configuración
+
+### application.yml
+```yaml
+spring:
   datasource:
     url: jdbc:postgresql://localhost:5433/partitures_db
-    username: admin
+    username: admin  
     password: admin
   
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
-  
+
 app:
   file:
     upload-dir: uploads
-Docker Compose
-yamlservices:
+```
+
+### docker-compose.yml
+```yaml
+version: '3.8'
+services:
   postgres:
     image: postgres:15
     environment:
@@ -176,39 +293,70 @@ yamlservices:
       POSTGRES_PASSWORD: admin
     ports:
       - "5433:5432"
+```
 
-🚀 Próximas Mejoras Planeadas
+## 🧪 Testing con cURL
 
- Autenticación JWT + Spring Security
- Validaciones @Valid en controllers
- Paginación para endpoints de listas
- Tests unitarios e integración
- Documentación Swagger/OpenAPI
- Cache Redis para consultas frecuentes
- Métricas y observabilidad
- Interfaz web frontend
-
-
-🧪 Testing Manual
-Puedes probar la API usando Postman, Insomnia o curl:
-bash# Crear usuario
+### Crear Usuario
+```bash
 curl -X POST http://localhost:8080/api/users \
   -H "Content-Type: application/json" \
   -d '{"name":"Test User","email":"test@example.com","password":"Password123"}'
+```
 
-# Login
+### Login
+```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","password":"Password123"}'
+```
 
-# Obtener partituras públicas
+### Obtener Partituras Públicas
+```bash
 curl http://localhost:8080/api/sheets/public
+```
 
-📞 Contacto y Contribución
+### Buscar Partituras
+```bash
+curl "http://localhost:8080/api/sheets/search/advanced?searchTerm=classical&sortBy=recent"
+```
 
-Repositorio: GitHub - partitures_v2
-Autor: Anghelo-10-10
-Stack: Kotlin + Spring Boot + PostgreSQL
+## 🚀 Roadmap
 
+- [ ] **JWT + Spring Security** para autenticación stateless
+- [ ] **Validaciones @Valid** en controllers  
+- [ ] **Paginación** para endpoints de listas
+- [ ] **Tests unitarios** e integración
+- [ ] **Swagger/OpenAPI** para documentación automática
+- [ ] **Cache Redis** para consultas frecuentes
+- [ ] **Métricas Prometheus** para observabilidad
+- [ ] **Frontend React/Vue** para interfaz gráfica
 
-¡La API está lista para ser consumida por cualquier frontend o aplicación móvil! 🎵✨
+## 🐛 Solución de Problemas
+
+### Error de Conexión a BD
+1. Verificar que PostgreSQL esté ejecutándose en puerto 5433
+2. Comprobar credenciales en `application.yml`
+3. Usar Docker: `docker-compose up -d`
+
+### Error de Subida de Archivos
+1. Verificar que el archivo sea PDF válido
+2. Comprobar tamaño máximo (5MB)
+3. Revisar logs para detalles del error
+
+### Puerto en Uso
+```bash
+# Cambiar puerto en application.yml
+server:
+  port: 8081
+```
+
+## 📞 Contacto
+
+- **GitHub**: [Anghelo-10-10](https://github.com/Anghelo-10-10)
+- **Repositorio**: [partitures_v2](https://github.com/Anghelo-10-10/partitures_v2)
+- **Stack**: Kotlin + Spring Boot + PostgreSQL
+
+---
+
+**🎵 ¡API lista para ser consumida por cualquier frontend o aplicación móvil! ✨**
