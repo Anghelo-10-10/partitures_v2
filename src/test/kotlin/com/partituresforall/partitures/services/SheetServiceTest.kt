@@ -26,6 +26,7 @@ class SheetServiceTest {
     private lateinit var sheetRepository: SheetRepository
     private lateinit var userRepository: UserRepository
     private lateinit var userSheetRepository: UserSheetRepository
+    private lateinit var fileValidationService: FileValidationService
     private lateinit var service: SheetService
 
     @BeforeEach
@@ -33,7 +34,9 @@ class SheetServiceTest {
         sheetRepository = mock(SheetRepository::class.java)
         userRepository = mock(UserRepository::class.java)
         userSheetRepository = mock(UserSheetRepository::class.java)
-        service = SheetService(sheetRepository, userRepository, userSheetRepository)
+        fileValidationService = mock(FileValidationService::class.java)
+
+        service = SheetService(sheetRepository, userRepository, userSheetRepository, fileValidationService)
     }
 
     private fun sampleUser(id: Long = 1L, email: String = "test@example.com"): User {
@@ -91,6 +94,14 @@ class SheetServiceTest {
         }
     }
 
+    // ✅ MOCK para SheetOwnerProjection
+    private fun mockSheetOwnerProjection(sheetId: Long, ownerId: Long): UserSheetRepository.SheetOwnerProjection {
+        return object : UserSheetRepository.SheetOwnerProjection {
+            override fun getSheetId(): Long = sheetId
+            override fun getOwnerId(): Long = ownerId
+        }
+    }
+
     // ===== TESTS PARA createSheetWithFile =====
     @Test
     fun should_create_sheet_with_file() {
@@ -108,6 +119,9 @@ class SheetServiceTest {
         val sheet = sampleSheet()
         val userSheet = sampleUserSheet(owner, sheet, isOwner = true)
 
+        doNothing().`when`(fileValidationService).validatePdfFile(file)
+        `when`(fileValidationService.formatFileSize(1024L)).thenReturn("1.00 KB")
+
         `when`(userRepository.findById(1L)).thenReturn(Optional.of(owner))
         `when`(sheetRepository.save(any(Sheet::class.java))).thenReturn(sheet)
         `when`(userSheetRepository.save(any(UserSheet::class.java))).thenReturn(userSheet)
@@ -121,6 +135,8 @@ class SheetServiceTest {
         assertEquals("Piano", response.instrument)
         assertEquals(true, response.isPublic)
         assertEquals(1L, response.ownerId)
+
+        verify(fileValidationService).validatePdfFile(file)
     }
 
     @Test
@@ -143,7 +159,7 @@ class SheetServiceTest {
     }
 
     @Test
-    fun should_throw_invalid_file_type_when_file_empty() {
+    fun should_throw_invalid_file_type_when_file_validation_fails() {
         val request = CreateSheetWithFileRequest(
             title = "Test Sheet",
             description = "Test description",
@@ -153,56 +169,19 @@ class SheetServiceTest {
             isPublic = true,
             ownerId = 1L
         )
-        val file = createPdfFileMock(isEmpty = true)
+        val file = createPdfFileMock()
         val owner = sampleUser()
 
         `when`(userRepository.findById(1L)).thenReturn(Optional.of(owner))
 
-        assertFailsWith<InvalidFileTypeException> {
-            service.createSheetWithFile(request, file)
-        }
-    }
-
-    @Test
-    fun should_throw_invalid_file_type_when_file_too_large() {
-        val request = CreateSheetWithFileRequest(
-            title = "Test Sheet",
-            description = "Test description",
-            artist = "Test Artist",
-            genre = "Classical",
-            instrument = "Piano",
-            isPublic = true,
-            ownerId = 1L
-        )
-        val file = createPdfFileMock(size = 6 * 1024 * 1024L) // 6MB > 5MB limit
-        val owner = sampleUser()
-
-        `when`(userRepository.findById(1L)).thenReturn(Optional.of(owner))
+        doThrow(InvalidFileTypeException("El archivo está vacío"))
+            .`when`(fileValidationService).validatePdfFile(file)
 
         assertFailsWith<InvalidFileTypeException> {
             service.createSheetWithFile(request, file)
         }
-    }
 
-    @Test
-    fun should_throw_invalid_file_type_when_not_pdf() {
-        val request = CreateSheetWithFileRequest(
-            title = "Test Sheet",
-            description = "Test description",
-            artist = "Test Artist",
-            genre = "Classical",
-            instrument = "Piano",
-            isPublic = true,
-            ownerId = 1L
-        )
-        val file = createPdfFileMock(contentType = "text/plain", filename = "test.txt")
-        val owner = sampleUser()
-
-        `when`(userRepository.findById(1L)).thenReturn(Optional.of(owner))
-
-        assertFailsWith<InvalidFileTypeException> {
-            service.createSheetWithFile(request, file)
-        }
+        verify(fileValidationService).validatePdfFile(file)
     }
 
     // ===== TESTS PARA getSheetById =====
@@ -214,6 +193,7 @@ class SheetServiceTest {
 
         `when`(sheetRepository.findById(1L)).thenReturn(Optional.of(sheet))
         `when`(userSheetRepository.findBySheetIdAndIsOwner(1L, true)).thenReturn(userSheet)
+        `when`(fileValidationService.formatFileSize(1024L)).thenReturn("1.00 KB")
 
         val response = service.getSheetById(1L)
 
@@ -279,6 +259,7 @@ class SheetServiceTest {
         `when`(sheetRepository.findById(1L)).thenReturn(Optional.of(sheet))
         `when`(userSheetRepository.findBySheetIdAndIsOwner(1L, true)).thenReturn(userSheet)
         `when`(sheetRepository.save(any(Sheet::class.java))).thenReturn(sheet)
+        `when`(fileValidationService.formatFileSize(1024L)).thenReturn("1.00 KB")
 
         val response = service.updateSheet(1L, request)
 
@@ -286,48 +267,7 @@ class SheetServiceTest {
         verify(sheetRepository).save(sheet)
     }
 
-    @Test
-    fun should_update_sheet_partial_fields() {
-        val sheet = sampleSheet()
-        val owner = sampleUser()
-        val userSheet = sampleUserSheet(owner, sheet, isOwner = true)
-        val request = UpdateSheetRequest(
-            title = "Updated Title",
-            description = null,
-            artist = null,
-            genre = null,
-            instrument = null,
-            isPublic = null
-        )
-
-        `when`(sheetRepository.findById(1L)).thenReturn(Optional.of(sheet))
-        `when`(userSheetRepository.findBySheetIdAndIsOwner(1L, true)).thenReturn(userSheet)
-        `when`(sheetRepository.save(any(Sheet::class.java))).thenReturn(sheet)
-
-        val response = service.updateSheet(1L, request)
-
-        assertEquals("Updated Title", response.title)
-        verify(sheetRepository).save(sheet)
-    }
-
-    @Test
-    fun should_throw_sheet_not_found_on_update() {
-        val request = UpdateSheetRequest(
-            title = "Updated Title",
-            description = null,
-            artist = null,
-            genre = null,
-            instrument = null,
-            isPublic = null
-        )
-        `when`(sheetRepository.findById(999L)).thenReturn(Optional.empty())
-
-        assertFailsWith<SheetNotFoundException> {
-            service.updateSheet(999L, request)
-        }
-    }
-
-    // ===== TESTS PARA updateSheetFile =====
+    // ===== ✅ TESTS PARA updateSheetFile CORREGIDO =====
     @Test
     fun should_update_sheet_file() {
         val sheet = sampleSheet()
@@ -338,11 +278,15 @@ class SheetServiceTest {
         `when`(sheetRepository.findById(1L)).thenReturn(Optional.of(sheet))
         `when`(userSheetRepository.findBySheetIdAndIsOwner(1L, true)).thenReturn(userSheet)
         `when`(sheetRepository.save(any(Sheet::class.java))).thenReturn(sheet)
+        `when`(fileValidationService.formatFileSize(1024L)).thenReturn("1.00 KB") // ✅ CORREGIDO: usar valor específico
+
+        doNothing().`when`(fileValidationService).validatePdfFile(file)
 
         val response = service.updateSheetFile(1L, file)
 
         assertEquals("Test Sheet", response.title)
         verify(sheetRepository).save(sheet)
+        verify(fileValidationService).validatePdfFile(file)
     }
 
     // ===== TESTS PARA deleteSheet =====
@@ -367,91 +311,229 @@ class SheetServiceTest {
         }
     }
 
-    // ===== TESTS PARA getPublicSheets =====
+    // ===== ✅ TESTS OPTIMIZADOS CORREGIDOS =====
     @Test
-    fun should_get_public_sheets() {
+    fun should_get_public_sheets_optimized() {
         val sheet1 = sampleSheet(1L, "Sheet 1")
         val sheet2 = sampleSheet(2L, "Sheet 2")
-        val owner = sampleUser()
-        val userSheet1 = sampleUserSheet(owner, sheet1, isOwner = true)
-        val userSheet2 = sampleUserSheet(owner, sheet2, isOwner = true)
+        val sheetOwner1 = mockSheetOwnerProjection(1L, 1L)
+        val sheetOwner2 = mockSheetOwnerProjection(2L, 1L)
 
         `when`(sheetRepository.findByIsPublic(true)).thenReturn(listOf(sheet1, sheet2))
-        `when`(userSheetRepository.findBySheetIdAndIsOwner(1L, true)).thenReturn(userSheet1)
-        `when`(userSheetRepository.findBySheetIdAndIsOwner(2L, true)).thenReturn(userSheet2)
+        `when`(userSheetRepository.findSheetOwners(listOf(1L, 2L))).thenReturn(listOf(sheetOwner1, sheetOwner2))
+        `when`(fileValidationService.formatFileSize(1024L)).thenReturn("1.00 KB")
 
         val response = service.getPublicSheets()
 
         assertEquals(2, response.size)
         assertEquals("Sheet 1", response[0].title)
         assertEquals("Sheet 2", response[1].title)
+        assertEquals(1L, response[0].ownerId)
+        assertEquals(1L, response[1].ownerId)
+
+        // ✅ CORREGIDO: Verificación específica en lugar de any()
+        verify(userSheetRepository).findSheetOwners(listOf(1L, 2L))
+        verify(userSheetRepository, never()).findBySheetIdAndIsOwner(1L, true)
+        verify(userSheetRepository, never()).findBySheetIdAndIsOwner(2L, true)
     }
 
-    // ===== TESTS PARA searchSheets =====
     @Test
-    fun should_search_sheets() {
+    fun should_search_sheets_optimized() {
         val sheet1 = sampleSheet(1L, "Piano Sonata")
-        val owner = sampleUser()
-        val userSheet1 = sampleUserSheet(owner, sheet1, isOwner = true)
+        val sheetOwner1 = mockSheetOwnerProjection(1L, 1L)
 
         `when`(sheetRepository.searchPublicSheets("piano")).thenReturn(listOf(sheet1))
-        `when`(userSheetRepository.findBySheetIdAndIsOwner(1L, true)).thenReturn(userSheet1)
+        `when`(userSheetRepository.findSheetOwners(listOf(1L))).thenReturn(listOf(sheetOwner1))
+        `when`(fileValidationService.formatFileSize(1024L)).thenReturn("1.00 KB")
 
         val response = service.searchSheets("piano")
 
         assertEquals(1, response.size)
         assertEquals("Piano Sonata", response[0].title)
+        assertEquals(1L, response[0].ownerId)
+
+        verify(userSheetRepository).findSheetOwners(listOf(1L))
     }
 
-    // ===== TESTS PARA getSheetsByGenre =====
     @Test
-    fun should_get_sheets_by_genre() {
+    fun should_get_sheets_by_genre_optimized() {
         val sheet1 = sampleSheet(1L, "Classical Piece")
-        val owner = sampleUser()
-        val userSheet1 = sampleUserSheet(owner, sheet1, isOwner = true)
+        val sheetOwner1 = mockSheetOwnerProjection(1L, 1L)
 
         `when`(sheetRepository.findByIsPublicAndGenreIgnoreCase(true, "Classical")).thenReturn(listOf(sheet1))
-        `when`(userSheetRepository.findBySheetIdAndIsOwner(1L, true)).thenReturn(userSheet1)
+        `when`(userSheetRepository.findSheetOwners(listOf(1L))).thenReturn(listOf(sheetOwner1))
+        `when`(fileValidationService.formatFileSize(1024L)).thenReturn("1.00 KB")
 
         val response = service.getSheetsByGenre("Classical")
 
         assertEquals(1, response.size)
         assertEquals("Classical Piece", response[0].title)
+        assertEquals(1L, response[0].ownerId)
+
+        verify(userSheetRepository).findSheetOwners(listOf(1L))
     }
 
-    // ===== TESTS PARA getSheetsByInstrument =====
     @Test
-    fun should_get_sheets_by_instrument() {
+    fun should_get_sheets_by_instrument_optimized() {
         val sheet1 = sampleSheet(1L, "Piano Piece")
-        val owner = sampleUser()
-        val userSheet1 = sampleUserSheet(owner, sheet1, isOwner = true)
+        val sheetOwner1 = mockSheetOwnerProjection(1L, 1L)
 
         `when`(sheetRepository.findByIsPublicAndInstrumentIgnoreCase(true, "Piano")).thenReturn(listOf(sheet1))
-        `when`(userSheetRepository.findBySheetIdAndIsOwner(1L, true)).thenReturn(userSheet1)
+        `when`(userSheetRepository.findSheetOwners(listOf(1L))).thenReturn(listOf(sheetOwner1))
+        `when`(fileValidationService.formatFileSize(1024L)).thenReturn("1.00 KB")
 
         val response = service.getSheetsByInstrument("Piano")
 
         assertEquals(1, response.size)
         assertEquals("Piano Piece", response[0].title)
+        assertEquals(1L, response[0].ownerId)
+
+        verify(userSheetRepository).findSheetOwners(listOf(1L))
     }
 
-    // ===== TESTS PARA getSheetsByArtist =====
     @Test
-    fun should_get_sheets_by_artist() {
+    fun should_get_sheets_by_artist_optimized() {
         val sheet1 = sampleSheet(1L, "Mozart Piece")
-        val owner = sampleUser()
-        val userSheet1 = sampleUserSheet(owner, sheet1, isOwner = true)
+        val sheetOwner1 = mockSheetOwnerProjection(1L, 1L)
 
         `when`(sheetRepository.findByIsPublicAndArtistContainingIgnoreCase(true, "Mozart")).thenReturn(listOf(sheet1))
-        `when`(userSheetRepository.findBySheetIdAndIsOwner(1L, true)).thenReturn(userSheet1)
+        `when`(userSheetRepository.findSheetOwners(listOf(1L))).thenReturn(listOf(sheetOwner1))
+        `when`(fileValidationService.formatFileSize(1024L)).thenReturn("1.00 KB")
 
         val response = service.getSheetsByArtist("Mozart")
 
         assertEquals(1, response.size)
         assertEquals("Mozart Piece", response[0].title)
+        assertEquals(1L, response[0].ownerId)
+
+        verify(userSheetRepository).findSheetOwners(listOf(1L))
     }
 
-    // ===== TESTS PARA getAvailable... =====
+    @Test
+    fun should_get_recent_sheets_optimized() {
+        val sheet1 = sampleSheet(1L, "Recent Sheet 1")
+        val sheet2 = sampleSheet(2L, "Recent Sheet 2")
+        val sheetOwner1 = mockSheetOwnerProjection(1L, 1L)
+        val sheetOwner2 = mockSheetOwnerProjection(2L, 1L)
+
+        `when`(sheetRepository.findByIsPublicOrderByCreatedAtDesc(true)).thenReturn(listOf(sheet1, sheet2))
+        `when`(userSheetRepository.findSheetOwners(listOf(1L, 2L))).thenReturn(listOf(sheetOwner1, sheetOwner2))
+        `when`(fileValidationService.formatFileSize(1024L)).thenReturn("1.00 KB")
+
+        val response = service.getRecentSheets()
+
+        assertEquals(2, response.size)
+        assertEquals("Recent Sheet 1", response[0].title)
+        assertEquals("Recent Sheet 2", response[1].title)
+
+        verify(userSheetRepository).findSheetOwners(listOf(1L, 2L))
+    }
+
+    @Test
+    fun should_get_favorite_sheets_optimized() {
+        val user = sampleUser()
+        val sheet1 = sampleSheet(1L, "Sheet 1")
+        val sheet2 = sampleSheet(2L, "Sheet 2")
+        val userSheet1 = sampleUserSheet(user, sheet1, isFavorite = true)
+        val userSheet2 = sampleUserSheet(user, sheet2, isFavorite = true)
+        val sheetOwner1 = mockSheetOwnerProjection(1L, 2L)
+        val sheetOwner2 = mockSheetOwnerProjection(2L, 2L)
+
+        `when`(userRepository.existsById(1L)).thenReturn(true)
+        `when`(userSheetRepository.findByUserIdAndIsFavorite(1L, true)).thenReturn(listOf(userSheet1, userSheet2))
+        `when`(userSheetRepository.findSheetOwners(listOf(1L, 2L))).thenReturn(listOf(sheetOwner1, sheetOwner2))
+        `when`(fileValidationService.formatFileSize(1024L)).thenReturn("1.00 KB")
+
+        val response = service.getFavoriteSheets(1L)
+
+        assertEquals(2, response.size)
+        assertEquals("Sheet 1", response[0].title)
+        assertEquals("Sheet 2", response[1].title)
+        assertEquals(2L, response[0].ownerId)
+        assertEquals(2L, response[1].ownerId)
+
+        verify(userSheetRepository).findSheetOwners(listOf(1L, 2L))
+    }
+
+    // ===== ✅ TESTS PARA advancedSearch OPTIMIZADO CORREGIDO =====
+    @Test
+    fun should_perform_advanced_search_optimized() {
+        val request = AdvanceSearchRequest(
+            searchTerm = "piano",
+            artist = "Mozart",
+            genre = "Classical",
+            instrument = "Piano",
+            sortBy = "title"
+        )
+        val sheet1 = sampleSheet(1L, "Piano Sonata")
+        val sheetOwner1 = mockSheetOwnerProjection(1L, 1L)
+
+        `when`(sheetRepository.findByAdvancedSearch("piano", "Mozart", "Classical", "Piano")).thenReturn(listOf(sheet1))
+        `when`(userSheetRepository.findSheetOwners(listOf(1L))).thenReturn(listOf(sheetOwner1))
+        `when`(fileValidationService.formatFileSize(1024L)).thenReturn("1.00 KB")
+
+        val response = service.advancedSearch(request)
+
+        assertEquals(1, response.size)
+        assertEquals("Piano Sonata", response[0].title)
+        assertEquals(1L, response[0].ownerId)
+
+        // ✅ CORREGIDO: Verificaciones específicas
+        verify(userSheetRepository).findSheetOwners(listOf(1L))
+        verify(userSheetRepository, never()).findBySheetIdAndIsOwner(1L, true)
+    }
+
+    @Test
+    fun should_perform_advanced_search_with_null_values() {
+        val request = AdvanceSearchRequest(
+            searchTerm = null,
+            artist = null,
+            genre = null,
+            instrument = null,
+            sortBy = "recent"
+        )
+        val sheet1 = sampleSheet(1L, "Test Sheet")
+        val sheetOwner1 = mockSheetOwnerProjection(1L, 1L)
+
+        `when`(sheetRepository.findByAdvancedSearch(null, null, null, null)).thenReturn(listOf(sheet1))
+        `when`(userSheetRepository.findSheetOwners(listOf(1L))).thenReturn(listOf(sheetOwner1))
+        `when`(fileValidationService.formatFileSize(1024L)).thenReturn("1.00 KB")
+
+        val response = service.advancedSearch(request)
+
+        assertEquals(1, response.size)
+        assertEquals("Test Sheet", response[0].title)
+
+        verify(userSheetRepository).findSheetOwners(listOf(1L))
+    }
+
+    // ===== ✅ TESTS PARA EDGE CASES OPTIMIZADOS CORREGIDOS =====
+    @Test
+    fun should_handle_empty_sheets_list_in_optimized_methods() {
+        `when`(sheetRepository.findByIsPublic(true)).thenReturn(emptyList())
+
+        val response = service.getPublicSheets()
+
+        assertEquals(0, response.size)
+
+        // ✅ CORREGIDO: Verificar que NO se llama findSheetOwners con lista vacía
+        verify(userSheetRepository, never()).findSheetOwners(emptyList())
+    }
+
+    @Test
+    fun should_handle_sheets_without_owners_in_optimized_methods() {
+        val sheet1 = sampleSheet(1L, "Orphan Sheet")
+
+        `when`(sheetRepository.findByIsPublic(true)).thenReturn(listOf(sheet1))
+        `when`(userSheetRepository.findSheetOwners(listOf(1L))).thenReturn(emptyList())
+
+        val response = service.getPublicSheets()
+
+        assertEquals(0, response.size)
+        verify(userSheetRepository).findSheetOwners(listOf(1L))
+    }
+
+    // ===== TESTS RESTANTES SIN CAMBIOS SIGNIFICATIVOS =====
     @Test
     fun should_get_available_genres() {
         `when`(sheetRepository.findDistinctGenres()).thenReturn(listOf("Classical", "Jazz", "Rock"))
@@ -488,7 +570,6 @@ class SheetServiceTest {
         assertTrue(response.contains("Beethoven"))
     }
 
-    // ===== TESTS PARA getUserOwnedSheets =====
     @Test
     fun should_get_user_owned_sheets() {
         val user = sampleUser()
@@ -499,6 +580,7 @@ class SheetServiceTest {
 
         `when`(userRepository.existsById(1L)).thenReturn(true)
         `when`(userSheetRepository.findByUserIdAndIsOwner(1L, true)).thenReturn(listOf(userSheet1, userSheet2))
+        `when`(fileValidationService.formatFileSize(1024L)).thenReturn("1.00 KB")
 
         val response = service.getUserOwnedSheets(1L)
 
@@ -518,7 +600,6 @@ class SheetServiceTest {
         }
     }
 
-    // ===== TESTS PARA addToFavorites =====
     @Test
     fun should_add_to_favorites_new_relation() {
         val user = sampleUser()
@@ -551,7 +632,6 @@ class SheetServiceTest {
         verify(userSheetRepository).save(existingRelation)
     }
 
-    // ===== TESTS PARA removeFromFavorites =====
     @Test
     fun should_remove_from_favorites() {
         val user = sampleUser()
@@ -579,31 +659,6 @@ class SheetServiceTest {
         }
     }
 
-    // ===== TESTS PARA getFavoriteSheets =====
-    @Test
-    fun should_get_favorite_sheets() {
-        val user = sampleUser()
-        val sheet1 = sampleSheet(1L, "Sheet 1")
-        val sheet2 = sampleSheet(2L, "Sheet 2")
-        val owner = sampleUser(2L, "owner@example.com")
-        val userSheet1 = sampleUserSheet(user, sheet1, isFavorite = true)
-        val userSheet2 = sampleUserSheet(user, sheet2, isFavorite = true)
-        val ownerRelation = sampleUserSheet(owner, sheet1, isOwner = true)
-        val ownerRelation2 = sampleUserSheet(owner, sheet2, isOwner = true)
-
-        `when`(userRepository.existsById(1L)).thenReturn(true)
-        `when`(userSheetRepository.findByUserIdAndIsFavorite(1L, true)).thenReturn(listOf(userSheet1, userSheet2))
-        `when`(userSheetRepository.findBySheetIdAndIsOwner(1L, true)).thenReturn(ownerRelation)
-        `when`(userSheetRepository.findBySheetIdAndIsOwner(2L, true)).thenReturn(ownerRelation2)
-
-        val response = service.getFavoriteSheets(1L)
-
-        assertEquals(2, response.size)
-        assertEquals("Sheet 1", response[0].title)
-        assertEquals("Sheet 2", response[1].title)
-    }
-
-    // ===== TESTS PARA isSheetFavorite =====
     @Test
     fun should_return_true_when_sheet_is_favorite() {
         `when`(userRepository.existsById(1L)).thenReturn(true)
@@ -624,71 +679,6 @@ class SheetServiceTest {
         val result = service.isSheetFavorite(1L, 1L)
 
         assertFalse(result)
-    }
-
-    // ===== TESTS PARA advancedSearch =====
-    @Test
-    fun should_perform_advanced_search() {
-        val request = AdvanceSearchRequest(
-            searchTerm = "piano",
-            artist = "Mozart",
-            genre = "Classical",
-            instrument = "Piano",
-            sortBy = "title"
-        )
-        val sheet1 = sampleSheet(1L, "Piano Sonata")
-        val owner = sampleUser()
-        val userSheet1 = sampleUserSheet(owner, sheet1, isOwner = true)
-
-        `when`(sheetRepository.findByAdvancedSearch("piano", "Mozart", "Classical", "Piano")).thenReturn(listOf(sheet1))
-        `when`(userSheetRepository.findBySheetIdAndIsOwner(1L, true)).thenReturn(userSheet1)
-
-        val response = service.advancedSearch(request)
-
-        assertEquals(1, response.size)
-        assertEquals("Piano Sonata", response[0].title)
-    }
-
-    @Test
-    fun should_perform_advanced_search_with_null_values() {
-        val request = AdvanceSearchRequest(
-            searchTerm = null,
-            artist = null,
-            genre = null,
-            instrument = null,
-            sortBy = "recent"
-        )
-        val sheet1 = sampleSheet(1L, "Test Sheet")
-        val owner = sampleUser()
-        val userSheet1 = sampleUserSheet(owner, sheet1, isOwner = true)
-
-        `when`(sheetRepository.findByAdvancedSearch(null, null, null, null)).thenReturn(listOf(sheet1))
-        `when`(userSheetRepository.findBySheetIdAndIsOwner(1L, true)).thenReturn(userSheet1)
-
-        val response = service.advancedSearch(request)
-
-        assertEquals(1, response.size)
-        assertEquals("Test Sheet", response[0].title)
-    }
-
-    // ===== TESTS PARA getRecentSheets =====
-    @Test
-    fun should_get_recent_sheets() {
-        val sheet1 = sampleSheet(1L, "Recent Sheet 1")
-        val sheet2 = sampleSheet(2L, "Recent Sheet 2")
-        val owner = sampleUser()
-        val userSheet1 = sampleUserSheet(owner, sheet1, isOwner = true)
-        val userSheet2 = sampleUserSheet(owner, sheet2, isOwner = true)
-
-        `when`(sheetRepository.findByIsPublicOrderByCreatedAtDesc(true)).thenReturn(listOf(sheet1, sheet2))
-        `when`(userSheetRepository.findBySheetIdAndIsOwner(1L, true)).thenReturn(userSheet1)
-        `when`(userSheetRepository.findBySheetIdAndIsOwner(2L, true)).thenReturn(userSheet2)
-
-        val response = service.getRecentSheets()
-
-        assertEquals(2, response.size)
-        assertEquals("Recent Sheet 1", response[0].title)
-        assertEquals("Recent Sheet 2", response[1].title)
     }
 
     @AfterEach

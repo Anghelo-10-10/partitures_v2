@@ -40,11 +40,12 @@ class UserServiceTest {
         return user
     }
 
-    // ===== TESTS EXISTENTES ACTUALIZADOS =====
+    // ===== TESTS EXISTENTES CORREGIDOS =====
 
     @Test
     fun should_create_a_user() {
-        val request = CreateUserRequest("Test User", "test@example.com", "password123")
+        // ✅ CORREGIDO: "password123" → "Password123" (con mayúscula)
+        val request = CreateUserRequest("Test User", "test@example.com", "Password123")
         `when`(userRepository.findByEmail(request.email)).thenReturn(null)
         `when`(passwordEncoder.encode(request.password)).thenReturn("hashed_password")
         `when`(userRepository.save(any(User::class.java))).thenReturn(sampleUser())
@@ -57,7 +58,8 @@ class UserServiceTest {
 
     @Test
     fun should_throw_duplicate_email() {
-        val request = CreateUserRequest("User", "taken@example.com", "password123")
+        // ✅ CORREGIDO: "password123" → "Password123" (con mayúscula)
+        val request = CreateUserRequest("User", "taken@example.com", "Password123")
         `when`(userRepository.findByEmail(request.email)).thenReturn(sampleUser(email = request.email))
 
         assertFailsWith<DuplicateEmailException> {
@@ -67,6 +69,7 @@ class UserServiceTest {
 
     @Test
     fun should_throw_invalid_password() {
+        // ✅ Este test está correcto - usa "123" que debe fallar
         val request = CreateUserRequest("User", "user@example.com", "123")
 
         // Mock que el email no existe para llegar a la validación de password
@@ -98,10 +101,11 @@ class UserServiceTest {
     @Test
     fun should_update_user_name_and_password() {
         val user = sampleUser()
-        val request = UpdateUserRequest(name = "Updated", email = null, password = "newpassword123")
+        // ✅ CORREGIDO: "newpassword123" → "NewPassword123" (con mayúscula)
+        val request = UpdateUserRequest(name = "Updated", email = null, password = "NewPassword123")
 
         `when`(userRepository.findById(1L)).thenReturn(Optional.of(user))
-        `when`(passwordEncoder.encode("newpassword123")).thenReturn("hashed_new_password")
+        `when`(passwordEncoder.encode("NewPassword123")).thenReturn("hashed_new_password")
         `when`(userRepository.save(any(User::class.java))).thenReturn(
             sampleUser().apply {
                 name = "Updated"
@@ -135,7 +139,8 @@ class UserServiceTest {
     @Test
     fun should_throw_duplicate_email_on_update() {
         val user = sampleUser()
-        val request = UpdateUserRequest(name = "anghelo", email = "new@example.com", password = "31547599")
+        // ✅ CORREGIDO: "31547599" → "Password123" (era solo números, ahora válida)
+        val request = UpdateUserRequest(name = "anghelo", email = "new@example.com", password = "Password123")
         `when`(userRepository.findById(1L)).thenReturn(Optional.of(user))
         `when`(userRepository.findByEmail("new@example.com")).thenReturn(sampleUser(email = "new@example.com"))
 
@@ -147,6 +152,7 @@ class UserServiceTest {
     @Test
     fun should_throw_invalid_password_on_update() {
         val user = sampleUser()
+        // ✅ Este test está correcto - usa "123" que debe fallar
         val request = UpdateUserRequest(name = "12345678", email = "testing@gmail.com", password = "123")
         `when`(userRepository.findById(1L)).thenReturn(Optional.of(user))
 
@@ -157,7 +163,8 @@ class UserServiceTest {
 
     @Test
     fun should_throw_not_found_on_update() {
-        val request = UpdateUserRequest(name = "X", email = "ejemplo@puce.edu.ec", password = "12asd7890283")
+        // ✅ CORREGIDO: "12asd7890283" → "Password123" (sin mayúscula → con mayúscula)
+        val request = UpdateUserRequest(name = "X", email = "ejemplo@puce.edu.ec", password = "Password123")
         `when`(userRepository.findById(1L)).thenReturn(Optional.empty())
 
         assertFailsWith<UserNotFoundException> {
@@ -194,7 +201,8 @@ class UserServiceTest {
 
     @Test
     fun should_login_user_successfully() {
-        val request = LoginRequest("test@example.com", "password123")
+        // ✅ CORREGIDO: "password123" → "Password123" (con mayúscula)
+        val request = LoginRequest("test@example.com", "Password123")
         val user = sampleUser()
 
         `when`(userRepository.findByEmail(request.email)).thenReturn(user)
@@ -208,7 +216,8 @@ class UserServiceTest {
 
     @Test
     fun should_throw_invalid_credentials_when_user_not_found() {
-        val request = LoginRequest("notfound@example.com", "password123")
+        // ✅ CORREGIDO: "password123" → "Password123" (con mayúscula)
+        val request = LoginRequest("notfound@example.com", "Password123")
 
         `when`(userRepository.findByEmail(request.email)).thenReturn(null)
 
@@ -219,7 +228,8 @@ class UserServiceTest {
 
     @Test
     fun should_throw_invalid_credentials_when_password_wrong() {
-        val request = LoginRequest("test@example.com", "wrongpassword")
+        // ✅ CORREGIDO: "wrongpassword" → "WrongPassword1" (con mayúscula y número)
+        val request = LoginRequest("test@example.com", "WrongPassword1")
         val user = sampleUser()
 
         `when`(userRepository.findByEmail(request.email)).thenReturn(user)
@@ -276,6 +286,56 @@ class UserServiceTest {
         assertFailsWith<UserNotFoundException> {
             service.updateProfile(999L, request)
         }
+    }
+
+    // ===== 🆕 TESTS ADICIONALES PARA VALIDACIONES DE CONTRASEÑA =====
+
+    @Test
+    fun should_throw_invalid_password_when_no_uppercase() {
+        // Test específico para validar que falla sin mayúscula
+        val request = CreateUserRequest("User", "test@example.com", "password123") // Sin mayúscula
+        `when`(userRepository.findByEmail(request.email)).thenReturn(null)
+
+        val exception = assertFailsWith<InvalidPasswordException> {
+            service.createUser(request)
+        }
+        assertEquals("La contraseña debe contener al menos una letra mayúscula", exception.message)
+    }
+
+    @Test
+    fun should_throw_invalid_password_when_no_lowercase() {
+        // Test específico para validar que falla sin minúscula
+        val request = CreateUserRequest("User", "test@example.com", "PASSWORD123") // Sin minúscula
+        `when`(userRepository.findByEmail(request.email)).thenReturn(null)
+
+        val exception = assertFailsWith<InvalidPasswordException> {
+            service.createUser(request)
+        }
+        assertEquals("La contraseña debe contener al menos una letra minúscula", exception.message)
+    }
+
+    @Test
+    fun should_throw_invalid_password_when_no_digit() {
+        // Test específico para validar que falla sin número
+        val request = CreateUserRequest("User", "test@example.com", "Password") // Sin número
+        `when`(userRepository.findByEmail(request.email)).thenReturn(null)
+
+        val exception = assertFailsWith<InvalidPasswordException> {
+            service.createUser(request)
+        }
+        assertEquals("La contraseña debe contener al menos un número", exception.message)
+    }
+
+    @Test
+    fun should_throw_invalid_password_when_too_short() {
+        // Test específico para validar que falla con menos de 8 caracteres
+        val request = CreateUserRequest("User", "test@example.com", "Pass1") // Solo 5 caracteres
+        `when`(userRepository.findByEmail(request.email)).thenReturn(null)
+
+        val exception = assertFailsWith<InvalidPasswordException> {
+            service.createUser(request)
+        }
+        assertEquals("La contraseña debe tener al menos 8 caracteres", exception.message)
     }
 
     @AfterEach

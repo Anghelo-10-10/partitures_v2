@@ -2,7 +2,6 @@ package com.partituresforall.partitures.services
 
 import com.partituresforall.partitures.exceptions.exceptions.files.FileNotFoundException
 import com.partituresforall.partitures.exceptions.exceptions.files.FileStorageException
-import com.partituresforall.partitures.exceptions.exceptions.files.InvalidFileTypeException
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.Resource
@@ -16,18 +15,12 @@ import java.nio.file.StandardCopyOption
 import java.util.*
 
 @Service
-class FileService {
+class FileService(
+    private val fileValidationService: FileValidationService // ✅ NUEVA DEPENDENCIA
+) {
 
     @Value("\${app.file.upload-dir:uploads}")
     private lateinit var uploadDir: String
-
-    // ===== TIPOS DE ARCHIVO PERMITIDOS =====
-    private val allowedPdfContentTypes = setOf(
-        "application/pdf"
-    )
-
-    // ===== LÍMITES DE TAMAÑO =====
-    private val maxFileSize = 10 * 1024 * 1024L // 10MB para PDFs
 
     @PostConstruct
     fun init() {
@@ -54,9 +47,10 @@ class FileService {
         return storePdfFile(file)
     }
 
-    // ===== ALMACENAR PDF (MÉTODO EXISTENTE) =====
+    // ===== ALMACENAR PDF CON VALIDACIÓN CENTRALIZADA =====
     fun storePdfFile(file: MultipartFile): String {
-        validatePdfFile(file)
+        // ✅ USAR VALIDACIÓN CENTRALIZADA en lugar de validatePdfFile()
+        fileValidationService.validatePdfFile(file)
 
         val fileName = generateUniqueFileName(file.originalFilename ?: "file.pdf")
         val subDir = "pdfs"
@@ -70,6 +64,25 @@ class FileService {
         }
     }
 
+    // ===== ALMACENAR PDF CON VALIDACIÓN ESTRICTA =====
+    /**
+     * ✅ NUEVO: Almacenar PDF con validación de contenido (magic bytes)
+     */
+    fun storePdfFileWithContentValidation(file: MultipartFile): String {
+        // Validación más estricta que incluye magic bytes
+        fileValidationService.validatePdfContent(file)
+
+        val fileName = generateUniqueFileName(file.originalFilename ?: "file.pdf")
+        val subDir = "pdfs"
+
+        return try {
+            val targetLocation = Paths.get(uploadDir, subDir).resolve(fileName)
+            Files.copy(file.inputStream, targetLocation, StandardCopyOption.REPLACE_EXISTING)
+            "$subDir/$fileName"
+        } catch (ex: IOException) {
+            throw FileStorageException("Could not store PDF file $fileName", ex)
+        }
+    }
 
     // ===== CARGAR ARCHIVO COMO RESOURCE =====
     fun loadFileAsResource(fileName: String): Resource {
@@ -109,30 +122,10 @@ class FileService {
         }
     }
 
-    // ===== VALIDACIONES =====
+    // ===== ❌ VALIDACIONES ELIMINADAS =====
+    // Ya no necesitamos validatePdfFile() porque usamos fileValidationService
 
-    private fun validatePdfFile(file: MultipartFile) {
-        if (file.isEmpty) {
-            throw InvalidFileTypeException("File is empty")
-        }
-
-        if (file.size > maxFileSize) {
-            throw InvalidFileTypeException("File size exceeds maximum allowed size of ${maxFileSize / (1024 * 1024)}MB")
-        }
-
-        val contentType = file.contentType
-        if (contentType !in allowedPdfContentTypes) {
-            throw InvalidFileTypeException("File type not allowed. Only PDF files are accepted")
-        }
-
-        val originalFilename = file.originalFilename ?: ""
-        if (!originalFilename.lowercase().endsWith(".pdf")) {
-            throw InvalidFileTypeException("File must have .pdf extension")
-        }
-    }
-
-
-    // ===== UTILIDADES =====
+    // ===== ✅ UTILIDADES ACTUALIZADAS =====
 
     private fun generateUniqueFileName(originalFilename: String): String {
         val timestamp = System.currentTimeMillis()
@@ -145,7 +138,53 @@ class FileService {
         return "/api/files/$fileName"
     }
 
+    // ✅ USAR SERVICIO CENTRALIZADO para verificar si es PDF
     fun isPdfFile(contentType: String?): Boolean {
-        return contentType in allowedPdfContentTypes
+        return fileValidationService.isPdfFile(contentType)
+    }
+
+    // ✅ NUEVOS MÉTODOS USANDO EL SERVICIO CENTRALIZADO
+
+    /**
+     * ✅ Obtener información detallada del archivo antes de almacenarlo
+     */
+    fun getFileInfo(file: MultipartFile): FileInfo {
+        return fileValidationService.getFileInfo(file)
+    }
+
+    /**
+     * ✅ Validar archivo sin almacenarlo
+     */
+    fun validatePdfFile(file: MultipartFile) {
+        fileValidationService.validatePdfFile(file)
+    }
+
+    /**
+     * ✅ Formatear tamaño de archivo
+     */
+    fun formatFileSize(bytes: Long): String {
+        return fileValidationService.formatFileSize(bytes)
+    }
+
+    /**
+     * ✅ Almacenar archivo con logging detallado
+     */
+    fun storePdfFileWithLogging(file: MultipartFile): String {
+        println("=== FILE STORAGE DEBUG ===")
+        val fileInfo = getFileInfo(file)
+        println("File info: $fileInfo")
+
+        try {
+            validatePdfFile(file)
+            println("✅ File validation passed")
+
+            val storedPath = storePdfFile(file)
+            println("✅ File stored at: $storedPath")
+
+            return storedPath
+        } catch (e: Exception) {
+            println("❌ File storage failed: ${e.message}")
+            throw e
+        }
     }
 }

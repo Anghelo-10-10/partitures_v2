@@ -23,7 +23,7 @@ data class Sheet(
     var instrument: String,
 
     // PDF content
-    @Lob
+    @Basic(fetch = FetchType.LAZY)
     @Column(name = "pdf_content", nullable = false, columnDefinition = "BYTEA")
     var pdfContent: ByteArray,
 

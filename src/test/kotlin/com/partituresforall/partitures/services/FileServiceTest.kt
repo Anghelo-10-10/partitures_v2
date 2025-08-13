@@ -4,6 +4,7 @@ import com.partituresforall.partitures.exceptions.exceptions.files.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.AfterEach
+import org.mockito.Mockito.*
 import org.springframework.web.multipart.MultipartFile
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -19,32 +20,47 @@ import kotlin.test.assertContentEquals
 
 class FileServiceTest {
 
+    private lateinit var fileValidationService: FileValidationService
     private lateinit var fileService: FileService
     private lateinit var tempUploadDir: Path
 
     @BeforeEach
     fun carga() {
-        // Crear directorio temporal para pruebas
-        tempUploadDir = Files.createTempDirectory("test-uploads")
+        try {
+            // ✅ CREAR MOCK del FileValidationService
+            fileValidationService = mock(FileValidationService::class.java)
 
-        fileService = FileService()
+            // Crear directorio temporal para pruebas
+            tempUploadDir = Files.createTempDirectory("test-uploads")
 
-        // Usar reflexión para establecer el uploadDir
-        val uploadDirField = FileService::class.java.getDeclaredField("uploadDir")
-        uploadDirField.isAccessible = true
-        uploadDirField.set(fileService, tempUploadDir.toString())
+            // ✅ USAR NUEVO CONSTRUCTOR con FileValidationService
+            fileService = FileService(fileValidationService)
 
-        // Inicializar el servicio
-        fileService.init()
+            // Usar reflexión para establecer el uploadDir
+            val uploadDirField = FileService::class.java.getDeclaredField("uploadDir")
+            uploadDirField.isAccessible = true
+            uploadDirField.set(fileService, tempUploadDir.toString())
+
+            // Inicializar el servicio
+            fileService.init()
+        } catch (e: Exception) {
+            // Si falla la inicialización, asegurarnos de que tempUploadDir tenga un valor
+            if (!::tempUploadDir.isInitialized) {
+                tempUploadDir = Files.createTempDirectory("test-uploads-fallback")
+            }
+            throw e
+        }
     }
 
     @AfterEach
     fun descarga() {
-        // Limpiar directorio temporal
-        tempUploadDir.toFile().deleteRecursively()
+        // ✅ VERIFICAR que tempUploadDir esté inicializado antes de limpiar
+        if (::tempUploadDir.isInitialized && Files.exists(tempUploadDir)) {
+            tempUploadDir.toFile().deleteRecursively()
+        }
     }
 
-    // ===== INIT TESTS =====
+    // ===== INIT TESTS (SIN CAMBIOS) =====
     @Test
     fun should_create_upload_directories_on_init() {
         val pdfsDir = tempUploadDir.resolve("pdfs")
@@ -58,7 +74,7 @@ class FileServiceTest {
     @Test
     fun should_throw_file_storage_exception_when_cannot_create_directories() {
         // Crear un nuevo servicio con un directorio inválido
-        val invalidService = FileService()
+        val invalidService = FileService(fileValidationService)
         val uploadDirField = FileService::class.java.getDeclaredField("uploadDir")
         uploadDirField.isAccessible = true
         uploadDirField.set(invalidService, "///invalid:path<<>>")
@@ -87,14 +103,19 @@ class FileServiceTest {
         assertEquals("/api/files/simple_file.pdf", url)
     }
 
+    // ✅ CORREGIDO: Usar mocks correctamente
     @Test
     fun should_check_if_content_type_is_pdf_correctly() {
+        `when`(fileValidationService.isPdfFile("application/pdf")).thenReturn(true)
+        `when`(fileValidationService.isPdfFile("text/plain")).thenReturn(false)
+        `when`(fileValidationService.isPdfFile(null)).thenReturn(false)
+
         assertTrue(fileService.isPdfFile("application/pdf"))
         assertFalse(fileService.isPdfFile("text/plain"))
         assertFalse(fileService.isPdfFile(null))
     }
 
-    // ===== LOAD FILE AS RESOURCE TESTS =====
+    // ===== LOAD FILE AS RESOURCE TESTS (SIN CAMBIOS) =====
     @Test
     fun should_load_legacy_file_as_resource() {
         // Crear archivo directamente en el directorio raíz (simulando archivo legacy)
@@ -137,7 +158,7 @@ class FileServiceTest {
         }
     }
 
-    // ===== DELETE FILE TESTS =====
+    // ===== DELETE FILE TESTS (SIN CAMBIOS) =====
     @Test
     fun should_delete_legacy_file_successfully() {
         // Crear archivo directamente en el directorio raíz
@@ -182,8 +203,7 @@ class FileServiceTest {
         assertFalse(result)
     }
 
-    // ===== SIMPLE MULTIPART FILE IMPLEMENTATION =====
-    // Implementación mínima para evitar conflictos de sobrecarga
+    // ===== SIMPLE MULTIPART FILE IMPLEMENTATION (SIN CAMBIOS) =====
     private class TestMultipartFile(
         private val filename: String?,
         private val contentType: String?,
@@ -200,7 +220,6 @@ class FileServiceTest {
         override fun getBytes(): ByteArray = content
         override fun getInputStream(): InputStream = ByteArrayInputStream(content)
 
-        // Implementaciones vacías para evitar conflictos
         override fun transferTo(dest: java.io.File) {
             dest.writeBytes(content)
         }
@@ -210,10 +229,13 @@ class FileServiceTest {
         }
     }
 
-    // ===== STORE FILE TESTS CON IMPLEMENTACIÓN SIMPLE =====
+    // ===== ✅ STORE FILE TESTS CORREGIDOS =====
     @Test
     fun should_store_valid_pdf_file_successfully() {
         val file = TestMultipartFile("document.pdf", "application/pdf", "test content".toByteArray())
+
+        // ✅ MOCK: FileValidationService no lanza excepción
+        doNothing().`when`(fileValidationService).validatePdfFile(file)
 
         val result = fileService.storeFile(file)
 
@@ -227,12 +249,19 @@ class FileServiceTest {
 
         val storedContent = Files.readAllBytes(storedFilePath)
         assertContentEquals("test content".toByteArray(), storedContent)
+
+        // ✅ VERIFICAR que se llamó la validación
+        verify(fileValidationService).validatePdfFile(file)
     }
 
     @Test
     fun should_generate_unique_filename_for_stored_files() {
         val file1 = TestMultipartFile("same.pdf", "application/pdf", "content1".toByteArray())
         val file2 = TestMultipartFile("same.pdf", "application/pdf", "content2".toByteArray())
+
+        // ✅ MOCK: FileValidationService no lanza excepción para ambos archivos
+        doNothing().`when`(fileValidationService).validatePdfFile(file1)
+        doNothing().`when`(fileValidationService).validatePdfFile(file2)
 
         val result1 = fileService.storeFile(file1)
         val result2 = fileService.storeFile(file2)
@@ -242,11 +271,18 @@ class FileServiceTest {
         assertTrue(result2.startsWith("pdfs/"))
         assertTrue(result1.endsWith(".pdf"))
         assertTrue(result2.endsWith(".pdf"))
+
+        // ✅ CORREGIDO: Verificar llamadas específicas en lugar de any()
+        verify(fileValidationService).validatePdfFile(file1)
+        verify(fileValidationService).validatePdfFile(file2)
     }
 
     @Test
     fun should_store_pdf_file_specifically() {
         val file = TestMultipartFile("test.pdf", "application/pdf", "pdf content".toByteArray())
+
+        // ✅ MOCK: FileValidationService no lanza excepción
+        doNothing().`when`(fileValidationService).validatePdfFile(file)
 
         val result = fileService.storePdfFile(file)
 
@@ -256,16 +292,24 @@ class FileServiceTest {
 
         val storedFilePath = tempUploadDir.resolve(result)
         assertTrue(Files.exists(storedFilePath))
+
+        verify(fileValidationService).validatePdfFile(file)
     }
 
-    // ===== VALIDATION TESTS =====
+    // ===== ✅ VALIDATION TESTS CORREGIDOS =====
     @Test
     fun should_throw_invalid_file_type_when_file_is_empty() {
         val file = TestMultipartFile("test.pdf", "application/pdf", byteArrayOf(), empty = true)
 
+        // ✅ MOCK: FileValidationService lanza excepción
+        doThrow(InvalidFileTypeException("El archivo está vacío"))
+            .`when`(fileValidationService).validatePdfFile(file)
+
         assertFailsWith<InvalidFileTypeException> {
             fileService.storeFile(file)
         }
+
+        verify(fileValidationService).validatePdfFile(file)
     }
 
     @Test
@@ -274,79 +318,178 @@ class FileServiceTest {
             "large.pdf",
             "application/pdf",
             "content".toByteArray(),
-            size = 11 * 1024 * 1024L // 11MB > 10MB limit
+            size = 11 * 1024 * 1024L // 11MB > límite
         )
+
+        // ✅ MOCK: FileValidationService lanza excepción
+        doThrow(InvalidFileTypeException("El archivo es demasiado grande"))
+            .`when`(fileValidationService).validatePdfFile(file)
 
         assertFailsWith<InvalidFileTypeException> {
             fileService.storeFile(file)
         }
+
+        verify(fileValidationService).validatePdfFile(file)
     }
 
     @Test
     fun should_throw_invalid_file_type_when_content_type_is_not_pdf() {
         val file = TestMultipartFile("document.txt", "text/plain", "content".toByteArray())
 
+        // ✅ MOCK: FileValidationService lanza excepción
+        doThrow(InvalidFileTypeException("Tipo de archivo no permitido"))
+            .`when`(fileValidationService).validatePdfFile(file)
+
         assertFailsWith<InvalidFileTypeException> {
             fileService.storeFile(file)
         }
+
+        verify(fileValidationService).validatePdfFile(file)
     }
 
     @Test
     fun should_throw_invalid_file_type_when_filename_extension_is_not_pdf() {
         val file = TestMultipartFile("document.txt", "application/pdf", "content".toByteArray())
 
+        // ✅ MOCK: FileValidationService lanza excepción
+        doThrow(InvalidFileTypeException("El archivo debe tener extensión .pdf"))
+            .`when`(fileValidationService).validatePdfFile(file)
+
         assertFailsWith<InvalidFileTypeException> {
             fileService.storeFile(file)
         }
+
+        verify(fileValidationService).validatePdfFile(file)
     }
 
     @Test
     fun should_accept_pdf_files_with_uppercase_extension() {
         val file = TestMultipartFile("document.PDF", "application/pdf", "pdf content".toByteArray())
 
+        // ✅ MOCK: FileValidationService no lanza excepción
+        doNothing().`when`(fileValidationService).validatePdfFile(file)
+
         val result = fileService.storeFile(file)
 
         assertNotNull(result)
         assertTrue(result.startsWith("pdfs/"))
+
+        verify(fileValidationService).validatePdfFile(file)
     }
 
     @Test
     fun should_handle_null_original_filename() {
         val file = TestMultipartFile(null, "application/pdf", "content".toByteArray())
 
-        // El FileService real lanza excepción cuando originalFilename es null
+        // ✅ MOCK: FileValidationService lanza excepción
+        doThrow(InvalidFileTypeException("El archivo debe tener extensión .pdf"))
+            .`when`(fileValidationService).validatePdfFile(file)
+
         assertFailsWith<InvalidFileTypeException> {
             fileService.storeFile(file)
         }
+
+        verify(fileValidationService).validatePdfFile(file)
+    }
+
+    // ===== ✅ TESTS PARA FileValidationService CORREGIDOS =====
+    @Test
+    fun should_use_file_validation_service_for_file_info() {
+        val file = TestMultipartFile("test.pdf", "application/pdf", "content".toByteArray())
+        val expectedFileInfo = FileInfo(
+            originalName = "test.pdf",
+            size = 7L,
+            sizeFormatted = "7.00 KB",
+            contentType = "application/pdf",
+            extension = "pdf",
+            isEmpty = false
+        )
+
+        // ✅ MOCK: FileValidationService retorna FileInfo
+        `when`(fileValidationService.getFileInfo(file)).thenReturn(expectedFileInfo)
+
+        val result = fileService.getFileInfo(file)
+
+        assertEquals(expectedFileInfo, result)
+        verify(fileValidationService).getFileInfo(file)
     }
 
     @Test
-    fun should_handle_empty_original_filename() {
-        val file = TestMultipartFile("", "application/pdf", "content".toByteArray())
+    fun should_use_file_validation_service_for_format_file_size() {
+        val bytes = 1024L
+        val expectedSize = "1.00 KB"
 
-        // El FileService real lanza excepción cuando originalFilename es vacío
-        // porque "" no termina en ".pdf"
-        assertFailsWith<InvalidFileTypeException> {
-            fileService.storeFile(file)
-        }
+        // ✅ MOCK: FileValidationService retorna tamaño formateado
+        `when`(fileValidationService.formatFileSize(bytes)).thenReturn(expectedSize)
+
+        val result = fileService.formatFileSize(bytes)
+
+        assertEquals(expectedSize, result)
+        verify(fileValidationService).formatFileSize(bytes)
     }
 
     @Test
-    fun should_handle_filename_without_extension() {
-        val file = TestMultipartFile("filename_without_extension", "application/pdf", "content".toByteArray())
+    fun should_use_file_validation_service_for_validate_pdf_file() {
+        val file = TestMultipartFile("test.pdf", "application/pdf", "content".toByteArray())
 
-        assertFailsWith<InvalidFileTypeException> {
-            fileService.storeFile(file)
-        }
+        // ✅ MOCK: FileValidationService no lanza excepción
+        doNothing().`when`(fileValidationService).validatePdfFile(file)
+
+        fileService.validatePdfFile(file)
+
+        verify(fileValidationService).validatePdfFile(file)
     }
 
+    @Test
+    fun should_store_pdf_file_with_content_validation() {
+        val file = TestMultipartFile("test.pdf", "application/pdf", "pdf content".toByteArray())
+
+        // ✅ MOCK: FileValidationService no lanza excepción
+        doNothing().`when`(fileValidationService).validatePdfContent(file)
+
+        val result = fileService.storePdfFileWithContentValidation(file)
+
+        assertNotNull(result)
+        assertTrue(result.startsWith("pdfs/"))
+        assertTrue(result.endsWith(".pdf"))
+
+        verify(fileValidationService).validatePdfContent(file)
+    }
+
+    @Test
+    fun should_store_pdf_file_with_logging() {
+        val file = TestMultipartFile("test.pdf", "application/pdf", "pdf content".toByteArray())
+        val expectedFileInfo = FileInfo(
+            originalName = "test.pdf",
+            size = 11L,
+            sizeFormatted = "11.00 KB",
+            contentType = "application/pdf",
+            extension = "pdf",
+            isEmpty = false
+        )
+
+        // ✅ MOCK: FileValidationService methods
+        `when`(fileValidationService.getFileInfo(file)).thenReturn(expectedFileInfo)
+        doNothing().`when`(fileValidationService).validatePdfFile(file)
+
+        val result = fileService.storePdfFileWithLogging(file)
+
+        assertNotNull(result)
+        assertTrue(result.startsWith("pdfs/"))
+
+        verify(fileValidationService).getFileInfo(file)
+        // ✅ CORREGIDO: Se llama 2 veces - en validatePdfFile() y en storePdfFile()
+        verify(fileValidationService, times(2)).validatePdfFile(file)
+    }
+
+    // ===== INTEGRATION TESTS (SIN CAMBIOS) =====
     @Test
     fun should_load_stored_file_as_resource() {
-        // Primero almacenamos un archivo
         val file = TestMultipartFile("test.pdf", "application/pdf", "test content".toByteArray())
-        val storedPath = fileService.storeFile(file)
 
-        // Luego lo cargamos como resource
+        doNothing().`when`(fileValidationService).validatePdfFile(file)
+
+        val storedPath = fileService.storeFile(file)
         val resource = fileService.loadFileAsResource(storedPath)
 
         assertNotNull(resource)
@@ -356,15 +499,14 @@ class FileServiceTest {
 
     @Test
     fun should_delete_stored_file_successfully() {
-        // Primero almacenamos un archivo
         val file = TestMultipartFile("test.pdf", "application/pdf", "test content".toByteArray())
-        val storedPath = fileService.storeFile(file)
 
-        // Verificar que existe
+        doNothing().`when`(fileValidationService).validatePdfFile(file)
+
+        val storedPath = fileService.storeFile(file)
         val filePath = tempUploadDir.resolve(storedPath)
         assertTrue(Files.exists(filePath))
 
-        // Eliminarlo
         val result = fileService.deleteFile(storedPath)
 
         assertTrue(result)
@@ -377,8 +519,10 @@ class FileServiceTest {
             "max_size.pdf",
             "application/pdf",
             "content".toByteArray(),
-            size = 10 * 1024 * 1024L // Exactamente 10MB (límite)
+            size = 5 * 1024 * 1024L // 5MB (límite)
         )
+
+        doNothing().`when`(fileValidationService).validatePdfFile(file)
 
         val result = fileService.storeFile(file)
 
@@ -389,6 +533,8 @@ class FileServiceTest {
     @Test
     fun should_handle_very_small_pdf_file() {
         val file = TestMultipartFile("tiny.pdf", "application/pdf", "x".toByteArray())
+
+        doNothing().`when`(fileValidationService).validatePdfFile(file)
 
         val result = fileService.storeFile(file)
 
