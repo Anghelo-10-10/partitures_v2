@@ -31,6 +31,7 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 	implementation("org.mindrot:jbcrypt:0.4")
+	implementation("com.fasterxml.jackson.core:jackson-databind")
 
 
 }
