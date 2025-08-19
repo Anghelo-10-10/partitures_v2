@@ -174,6 +174,19 @@ class SheetService(
             }
     }
 
+    fun getUserPublicSheets(userId: Long): List<SheetResponse> {
+        if (!userRepository.existsById(userId)) {
+            throw UserNotFoundException(userId)
+        }
+
+        // ✅ Obtener partituras del usuario que son propietario Y públicas
+        return userSheetRepository.findByUserIdAndIsOwner(userId, true)
+            .filter { it.sheet.isPublic }  // ← LA DIFERENCIA CLAVE con getUserOwnedSheets
+            .map {
+                it.sheet.toResponse().copy(ownerId = userId)
+            }
+    }
+
     fun addToFavorites(userId: Long, sheetId: Long) {
         val user = userRepository.findById(userId).orElseThrow {
             UserNotFoundException(userId)

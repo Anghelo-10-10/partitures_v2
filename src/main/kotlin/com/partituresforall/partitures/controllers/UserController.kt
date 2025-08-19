@@ -5,13 +5,16 @@ import com.partituresforall.partitures.models.requests.UpdateProfileRequest
 import com.partituresforall.partitures.models.requests.UpdateUserRequest
 import com.partituresforall.partitures.models.responses.UserProfileResponse
 import com.partituresforall.partitures.models.responses.UserResponse
+import com.partituresforall.partitures.models.responses.SheetResponse
 import com.partituresforall.partitures.services.UserService
+import com.partituresforall.partitures.services.SheetService
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/users")
 class UserController(
-    private val userService: UserService
+    private val userService: UserService,
+    private val sheetService: SheetService  // ✅ NUEVA DEPENDENCIA
 ) {
     @PostMapping
     fun createUser(@RequestBody request: CreateUserRequest): UserResponse {
@@ -43,10 +46,15 @@ class UserController(
 
     @PutMapping("/profile")
     fun updateMyProfile(
-        @RequestParam userId: Long, // Temporalmente como param, después con JWT
+        @RequestParam userId: Long,
         @RequestBody request: UpdateProfileRequest
     ): UserResponse {
         return userService.updateProfile(userId, request)
     }
 
+    // ✅ NUEVO ENDPOINT FALTANTE - Este era el problema
+    @GetMapping("/{id}/sheets/public")
+    fun getUserPublicSheets(@PathVariable id: Long): List<SheetResponse> {
+        return sheetService.getUserPublicSheets(id)
+    }
 }
