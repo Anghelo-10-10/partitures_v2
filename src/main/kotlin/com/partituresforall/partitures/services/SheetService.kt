@@ -116,10 +116,17 @@ class SheetService(
         return updatedSheet.toResponse().copy(ownerId = owner.id)
     }
 
-    fun deleteSheet(id: Long) {
-        if (!sheetRepository.existsById(id)) {
-            throw SheetNotFoundException(id)
-        }
+    fun deleteSheet(id: Long, userId: Long) {
+        // Validaciones básicas
+        if (!userRepository.existsById(userId)) throw UserNotFoundException(userId)
+        if (!sheetRepository.existsById(id)) throw SheetNotFoundException(id)
+
+        // Debe ser propietario
+        val relation = userSheetRepository.findByUserIdAndSheetId(userId, id)
+            ?: throw UnauthorizedSheetModificationException(userId, id)
+        if (!relation.isOwner) throw UnauthorizedSheetModificationException(userId, id)
+
+        // Borrar relaciones y luego la partitura
         userSheetRepository.deleteBySheetId(id)
         sheetRepository.deleteById(id)
     }

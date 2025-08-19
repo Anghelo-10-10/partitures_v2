@@ -6,6 +6,7 @@ import com.partituresforall.partitures.models.requests.UpdateSheetRequest
 import com.partituresforall.partitures.models.responses.SheetResponse
 import com.partituresforall.partitures.services.SheetService
 import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -62,8 +63,12 @@ class SheetController(
     }
 
     @DeleteMapping("/{id}")
-    fun deleteSheet(@PathVariable id: Long) {
-        sheetService.deleteSheet(id)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteSheet(
+        @PathVariable id: Long,
+        @RequestParam userId: Long
+    ) {
+        sheetService.deleteSheet(id, userId)
     }
 
 
