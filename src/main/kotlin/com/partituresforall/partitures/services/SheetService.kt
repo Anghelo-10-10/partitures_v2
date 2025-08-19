@@ -188,17 +188,16 @@ class SheetService(
     }
 
     fun addToFavorites(userId: Long, sheetId: Long) {
-        val user = userRepository.findById(userId).orElseThrow {
-            UserNotFoundException(userId)
-        }
+        val user = userRepository.findById(userId).orElseThrow { UserNotFoundException(userId) }
+        val sheet = sheetRepository.findById(sheetId).orElseThrow { SheetNotFoundException(sheetId) }
 
-        val sheet = sheetRepository.findById(sheetId).orElseThrow {
-            SheetNotFoundException(sheetId)
-        }
-
-        val existingRelation = userSheetRepository.findByUserIdAndSheetId(userId, sheetId)
-
-        if (existingRelation == null) {
+        val relation = userSheetRepository.findByUserIdAndSheetId(userId, sheetId)
+        if (relation != null) {
+            // ✅ Funciona tanto para dueño (isOwner=true) como para no-dueño
+            relation.isFavorite = true
+            userSheetRepository.save(relation)
+        } else {
+            // Usuario no dueño aún sin relación → crearla como favorito
             userSheetRepository.save(
                 UserSheet(
                     user = user,
@@ -207,28 +206,22 @@ class SheetService(
                     isFavorite = true
                 )
             )
-        } else {
-            existingRelation.isFavorite = true
-            userSheetRepository.save(existingRelation)
         }
     }
 
     fun removeFromFavorites(userId: Long, sheetId: Long) {
-        val relation = userSheetRepository.findByUserIdAndSheetId(userId, sheetId)
-            ?: throw SheetNotFoundException(sheetId)
+        val relation = userSheetRepository.findByUserIdAndSheetId(userId, sheetId) ?: return
 
         if (relation.isOwner) {
-            throw IllegalStateException("No se puede quitar de favoritos una partitura propia")
+            relation.isFavorite = false
+            userSheetRepository.save(relation)
+        } else {
+            userSheetRepository.delete(relation)
         }
-
-        userSheetRepository.delete(relation)
     }
 
     fun getFavoriteSheets(userId: Long): List<SheetResponse> {
-        if (!userRepository.existsById(userId)) {
-            throw UserNotFoundException(userId)
-        }
-
+        if (!userRepository.existsById(userId)) throw UserNotFoundException(userId)
         val userSheets = userSheetRepository.findByUserIdAndIsFavorite(userId, true)
         val sheets = userSheets.map { it.sheet }
         return getSheetsWithOwnersOptimized(sheets)
